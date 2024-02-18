@@ -1,0 +1,14 @@
+# .gitignore file for ONTeater NextFlow pipeline
+
+# Ignore all hidden files in root directory
+/.*
+
+# Explicitly include the base directory's '.gitignore' as an exception - you want git to track that one
+!/.gitignore
+
+
+# Ignore NextFlow's 'work' directory
+/work
+
+# Ignore fasta_QC (auto-generated with operation, not needed for git purposes
+/fasta_QC
