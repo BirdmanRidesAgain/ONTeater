@@ -1,5 +1,0 @@
-name: quast
-channels:
-  - bioconda
-  - conda-forge
-prefix: /opt/homebrew/Caskroom/miniforge/base/envs/quast
