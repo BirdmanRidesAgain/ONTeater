@@ -19,15 +19,21 @@ process NANOPLOT {
     output:
     path "${sample_id}_${trim_status}_NanoPlot"
 
+    stub:
+    """
+    mkdir "${sample_id}_${trim_status}_NanoPlot"
+    """
+
     script:
     sample_id = sample_id
     trim_status = trim_status
 
+    """
+    echo "Running NanoPlot on $trim_status reads: $sample_id"
+    echo "$task.cpus allocated"
+    """
     if (trim_status == 'raw') {
         """
-        echo "Running NanoPlot on reads: $sample_id"
-        echo "$task.cpus allocated"
-
         NanoPlot -t $task.cpus --huge \
         --tsv_stats --drop_outliers --loglength --color limegreen \
         -p ${sample_id}_${trim_status}_ --title ${sample_id}_${trim_status} \
@@ -36,9 +42,6 @@ process NANOPLOT {
         """
     } else {
         """
-        echo "Running NanoPlot on reads: $sample_id"
-        echo "$task.cpus allocated"
-
         NanoPlot -t $task.cpus --huge \
         --tsv_stats --drop_outliers --loglength --color royalblue \
         -p ${sample_id}_${trim_status}_ --title ${sample_id}_${trim_status} \
@@ -58,6 +61,11 @@ process CHOPPER {
 
     output:
     tuple val(sample_id), val(trim_status), path("${sample_id}_${trim_status}.fq.gz")
+
+    stub:
+    """
+    mkdir "${sample_id}_${trim_status}.fq.gz"
+    """
 
     script:
     sample_id = sample_id
@@ -80,6 +88,13 @@ process FLYE {
 
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")
+
+    stub:
+    sample_id = sample_id
+    assembler = "Flye"
+    """
+    touch "${sample_id}_${assembler}.fa"
+    """
 
     script:
     sample_id = sample_id
@@ -112,6 +127,11 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
     output:
     path "run.cfg"
 
+    stub:
+    """
+    touch "run.cfg"
+    """
+
     script:
     // Get genome size from the Flye assembly if not defined in params
     Integer genome_size = params.genome_size
@@ -134,6 +154,13 @@ process NEXTDENOVO {
 
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")
+
+    stub:
+    sample_id = sample_id
+    assembler = "nextDenovo"
+    """
+    touch "${sample_id}_${assembler}.fa"
+    """
 
     script: 
     sample_id = sample_id
@@ -159,6 +186,13 @@ process RACON {
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_racon.fa")
 
+    stub:
+    sample_id = sample_id
+    assembler = assembler
+    """
+    touch "${sample_id}_${assembler}_racon.fa"
+    """
+
     script:
     Integer threads = 20
     sample_id = sample_id
@@ -169,7 +203,53 @@ process RACON {
     racon -t $threads -u $reads ${assembler}.sam $fasta > ${sample_id}_${assembler}_racon.fa
     """
 }
-process ASSESS {
+
+process PILON {
+    tag "Polishing primary assembly $sample_id ($assembler) with Pilon"
+    publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
+    conda 'bioconda::pilon bioconda::minimap2'
+    label 'parallel'
+
+    input:
+    tuple val(sample_id), val(assembler), path(fasta)
+    tuple val(sample_id_short), path(reads)
+
+    output:
+    tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_racon_pilon.fa")
+
+    /*
+    probably necessary to check if sample_id_long == sample_id_short
+    if the two do not match, return the polish channel unchanged
+    this is to prevent polishing using the wrong species/dataset
+    */
+
+    stub:
+    sample_id = sample_id
+    assembler = assembler
+
+    if (sample_id == sample_id_short) { //only polish if they match
+    //call minimap and pilon here
+    """
+    touch "${sample_id}_${assembler}_racon_pilon.fa"
+    """
+    }
+    else { //nomatch; don't polish with different species
+        """
+        touch "${sample_id}_${assembler}_racon_pilon.fa"
+        """
+    }
+
+    script:
+    Integer threads = 20
+    sample_id = sample_id
+    assembler = assembler
+    """
+    minimap2 -t $threads $fasta -ax map-ont $reads > ${assembler}.sam
+    racon -t $threads -u $reads ${assembler}.sam $fasta > ${sample_id}_${assembler}_racon.fa
+    """
+}
+
+process QUAST {
     // This runs Quast on an assembly and returns the assembly+metadata, plus num_ctgs and N50
     tag "Calculating $sample_id ($assembler) N50 and number of contigs with Quast"
     publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
@@ -180,59 +260,93 @@ process ASSESS {
 
     output:
     tuple val(sample_id), val(assembler), val(n50), val(num_large_contigs), path(fasta)
-
-    exec:
+    
+    stub:
     sample_id = sample_id
     assembler = assembler
-    fasta = fasta
-    n50 = '0'
+
+    // This is a stub function simulating nextDenovo being a better assembler than Flye.
+    // Biologically speaking, that's usually the case - Flye kind of sucks.
+    if (assembler == "Flye") {
+        n50 = 25000000
+        num_large_contigs = 10
+    }
+    else { 
+        n50 = 45000000
+        num_large_contigs = 16
+    }
+    println "Assembly $sample_id ($assembler) number large (>50,000bp) contigs: $num_large_contigs"
+    """
+    touch "${sample_id}_${assembler}_racon.fa"
+    """
+
+    script: // or exec? might need to use that one
+    """
+    touch $fasta
+    quast -e -k ${fasta} -o ${sample_id}_quast
+    num_large_contigs=`cat ${sample_id}_quast/report.txt | grep "# contigs (>= 50000 bp)" | awk '{ print \$NF }'`
+    """
     num_large_contigs = '0'
-    
-    println "Calculating $sample_id ($assembler) N50 and number of contigs with Quast"
     //"""
-   // quast -e -k ${fasta} -o ${sample_id}_quast
+
    // echo "${sample_id}_quast/report.txt"
-   // ${num_large_contigs}=`cat ${sample_id}_quast/report.txt | grep "# contigs (>= 50000 bp)" | awk '{ print \$NF }'`
    // ${n50}=`cat ${sample_id}_quast/report.txt | grep "N50" | awk '{ print \$NF }'`
    // """
-    println "Assembly $sample_id ($assembler) N50: $n50"
     println "Assembly $sample_id ($assembler) number large (>50,000bp) contigs: $num_large_contigs"
 }
-/*
+
 process QUICKMERGE {
-    tag "Merging assemblies with Quickmerge"
+    tag "Merging $sample_id assemblies with Quickmerge"
     publishDir "results/merged_assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
 
     input:
-    tuple val(sample_id1), val(assembler1), Integer(n50_1), Integer(num_large_contigs1), path(fasta1)
-    tuple val(sample_id2), val(assembler2), Integer(n50_2), Integer(num_large_contigs2), path(fasta2)
+    tuple val(sample_id_1), val(assembler_1), val(n50_1), val(num_large_contigs_1), path(fasta_1) //this is flye
+    tuple val(sample_id_2), val(assembler_2), val(n50_2), val(num_large_contigs_2), path(fasta_2) //this is nextDenovo
 
     output:
-    tuple val(sample_id3), path(fasta3)
+    tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
 
-    script:
-    if (num_large_contigs1 >= num_large_contigs2 && n50_1 >= n50_2) {
-        println "$assembler1 assembly more contiguous. Merging $assembler2 into $assembler1"
-    } 
-    if else (num_large_contigs2 >= num_large_contigs1 && n50_1 >= n50_2)
-}
-
-process QUAST {
-    tag "Running Quast on $sample_id"
-    publishDir params.fasta_QC_dir, mode: 'copy'
-    conda 'bioconda::quast'
+    stub:
+    sample_id = sample_id_1 //they're all the same sample_id, ffs
+    if (n50_1 > n50_2) {
+        println("$assembler_1 assembly more contiguous. Merging $fasta_2 into $fasta_1")
+        assembler = assembler_1
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """
+    }
+    else { //it's very unlikely that we'll have a tie.
+        println("$assembler_2 assembly more contiguous. Merging $fasta_1 into $fasta_2")
+        assembler = assembler_2
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """ 
+        }
+    }
+ 
+process P_DUPS {
+    tag "Purging haplotypic duplicates from merged $sample_id assembly with Purge_dups"
+    publishDir "results/merged_assemblies", mode: 'copy'
+    conda 'bioconda::purge_dups'
 
     input:
-    tuple val(sample_id), path(fasta)
+    tuple val(sample_id), val(assembler), path(fasta)
 
     output:
-    path "quast/${sample_id}"
+    tuple val(sample_id), path("${sample_id}_${assembler}_major_merged_purged.fa")
 
-    script: 
+    stub:
+    sample_id = sample_id
+    assembler = assembler
+    //run ONThill wrapper script here - 
     """
-    quast -e -k ${fasta} -o quast/${sample_id}
+    touch "${sample_id}_${assembler}_major_merged_purged.fa"
     """
+}
 
+/*
+process MOSDEPTH {
+    tag "Outputs depth-per-contig stats from input assembly"
 }
 */
