@@ -11,7 +11,8 @@ The pipeline includes three dependencies: [NextFlow](https://www.nextflow.io/doc
 ![DAG of ONTeater operation. Some functions are dry-run only at the moment.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/ONTeater_DAG.png?raw=true)
 Figure 1. DAG graph of the pipeline execution.
 
-Figure 2. Output from R visualization.
+![Sample output from 'visualize_contig_lengths.R' module.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/modules/visualize_descending_contigs_sample_output.png?raw=true)
+Figure 2. Sample output from 'visualize_contig_lengths.R' module. Each bar represents a contig, with red bars denoting contigs over 1,000,000 bp in length. Green bars (not shown in this assembly) represent smaller ones, with the horizontal red line denoting the 1-million bp mark.
 
 ## Quickstart:
 For a dry run with the included dummy data, the following code works:
