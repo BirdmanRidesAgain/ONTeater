@@ -18,7 +18,7 @@ Figure 2. Sample output from 'visualize_contig_lengths.R' module. Each bar repre
 For a dry run with the included dummy data, the following code works:
 
 
-nextflow run ONTeater.nf -stub -with-dag --input_rawreads toy_data/*ONT*fq.gz --input_shortreads toy_data/*{1,2}.fq.gz
+*nextflow run ONTeater.nf -stub -with-dag --input_rawreads toy_data/*ONT*fq.gz --input_shortreads toy_data/*{1,2}.fq.gz*
 
 
 By default, ONTeater will look for your input data files in the directory in which ONTeater.nf is launched - therefore, if you have multiple unique datasets to analyze, you can also just store them in the working directory. If you do this, be aware that the files must conform to a uniform naming convention (\*ONT\*fq.gz for long reads and *{1,2}.fq.gz for short reads). Otherwise, it's possible for the parser to mix up short and longread data, or fail to recognize a data file. *It's generally safer to input them as parameters.*
