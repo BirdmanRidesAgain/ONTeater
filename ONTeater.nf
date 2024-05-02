@@ -2,8 +2,9 @@
  * Keiler Collier
  * ONTeater V1 - used to run genome assembly from concatenated, Kraken-filtered readfiles.
  *
- * Feb 16 2024
+ * May 2 2024
  * Pipeline input params supplied from nextflow.config
+ * Invocation is nextflow run ONTeater.nf -stub -with-report -with-dag ONTeater.html
  */
 
 log.info """\
@@ -32,9 +33,14 @@ def get_name_file_pair(paths) {
     return combined_list
 }
 
-include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/processes.nf'
-include { CHOPPER; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf'
-include {RACON as RACON_FLYE; RACON as RACON_ND; ASSESS as ASSESS_FLYE; ASSESS as ASSESS_ND } from './modules/processes.nf'
+include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/processes.nf' //nanoplot-related
+include { CHOPPER; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf' //primary assemblers
+include { //polishing-related
+    RACON as RACON_FLYE; RACON as RACON_ND; 
+    PILON as PILON_FLYE; PILON as PILON_ND; 
+    QUAST as QUAST_FLYE; QUAST as QUAST_ND; 
+    } from './modules/processes.nf'
+include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
 workflow {
     rawreads_ch = Channel.fromList(get_name_file_pair(params.input_rawreads))
 
@@ -57,30 +63,39 @@ workflow {
     // Polish and merge genomes
     racon_flye_ch = RACON_FLYE(polish_flye_ch)
     racon_nd_ch = RACON_ND(polish_nd_ch)
+    
+    
     // Polish with Illumina data if Illumina data is non-null
-    
-    racon_flye_ch.view()
-    assess_flye_ch = ASSESS_FLYE(racon_flye_ch)
-    /*
-    if (params.input_shortreads != null) {
-        println "Shortreads found at params.shortreads"
-        println "Polishing assemblies with Pilon"
-        pilon_flye_ch = PILON_FLYE(racon_flye_ch, params.shortreads)
-        pilon_nd_ch = PILON_ND(racon_nd_ch, params.shortreads)
+        //Illumina reads MUST be paired and named like this: *{1,2}.fq.gz
+        //Illumina sample IDs must also exactly match the longread sample names
+    shortreads_ch = Channel.fromFilePairs(params.input_shortreads)
 
-        assess_flye_ch = ASSESS_FLYE(pilon_flye_ch)
-        assess_nd_ch = ASSESS_ND(pilon_nd_ch)
-    } else {
-        println "no shortreads found"
-        assess_flye_ch = ASSESS_FLYE(racon_flye_ch)
-        assess_nd_ch = ASSESS_ND(racon_nd_ch)
+
+    if (!shortreads_ch) { println("No shortreads found. Skipping Pilon polishing.")}
+    else {
+        println("Shortreads found: ")
+        println("Polishing assemblies with Pilon")
+
+        polish_flye_ch = PILON_FLYE(racon_flye_ch, shortreads_ch)
+        polish_nd_ch = PILON_ND(racon_nd_ch, shortreads_ch)
     }
-    */
-    //assess_nd_ch.view()
-    //merged_ch = QUICKMERGE(racon_flye_ch, racon_nd_ch)
 
+    // Use quast to get n50 and number of large fragments for each assembly
+    quast_flye_ch = QUAST_FLYE(racon_flye_ch)
+    quast_nd_ch = QUAST_ND(racon_nd_ch)
 
-    // Code for running QC on a fasta.
-    //QUAST(fasta_ch)
+    //merge and purge duplicate contigs
+    merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch)
+    merged_purged_ch = P_DUPS(merged_ch) //replace p_dups call(s) with wrapper script.
     
+    // QC AND VISUALIZE ASSEMBLED GENOME:
+        /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
+        visual_output_ch = VISUALIZE(merged_purged_ch, depth_assess_ch)
+         calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
+         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
+         all called from ./modules/helper_scripts
+         outputs .pdfs of relevant stats
+         */
+
+    println("ONTeater workflow concludes.")
 }
