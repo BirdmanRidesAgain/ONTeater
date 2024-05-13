@@ -35,6 +35,7 @@ if (length(ARGS)==0)
 ###################################################
 # FIXME - implement some kind of checking to make sure these packages are installed, and install if not
 library(readr)
+library(forcats)
 library(stringr)
 library(dplyr)
 
