@@ -7,12 +7,11 @@ Usage: ./fx_name_filt test_longread_mtDNA.fq output.csv | gzip > test_longread_m
     OR
 Usage: zcat test_longread_mtDNA.fq.gz | ./fx_name_filt stdin output.csv | gzip > test_longread_mtDNA_filt.fq.gz
 
- Compile command is: g++ argparse_test.cpp -o argparse_test 
+ Compile command is: g++ fx_name_filt.cpp -o fx_name_filt
 */
 
 /*
 NEEDED FIXES:
-    get stdin working. See line 117
     get it to accept fasta files
 */
 
@@ -67,14 +66,13 @@ void parse_fastq(std::string fastx, std::vector<std::string> queries) {
     std::string line, name, content, qual; 
     int counter = 0; 
 
-    // begin reading stdin
+    // begin reading fastq
     while (std::getline(input, line).good()) {
         if (!line.empty()) {
             if ((counter % 4) == 0 ) {
-                std::cout << line << std::endl;
                 if ( !name.empty() && !content.empty() && !qual.empty()) {
-                    bool namePass = filter_on_name(name, queries);
-                    if (namePass) {
+                    bool queryPass = filter_on_name(name, queries);
+                    if (queryPass) {
                         std::cout << name << std::endl << content << std::endl << "+" << qual << std::endl;
                     }
                 }
@@ -123,7 +121,7 @@ int main( int argc, char **argv ) {
         int counter = 0; 
 
         // begin reading stdin
-        while (std::getline(std::cin, line)) {
+        while (std::getline(std::cin, line).good()) {
             if (!line.empty()) {
                 if ((counter % 4) == 0) {
                     if (!name.empty() && !content.empty() && !qual.empty()) {
@@ -133,13 +131,15 @@ int main( int argc, char **argv ) {
                         }
                     }
                     name = line;
-                } else if ((counter % 4) == 1) {
+                }
+                else if ((counter % 4) == 1) {
                     content = line;
                 }
-            } else if ((counter % 4) == 3) {
-                qual = line;
+                else if ((counter % 4) == 3) {
+                    qual = line;
+                }
+                counter++;
             }
-            counter++;
         }
     }
 
