@@ -73,7 +73,7 @@ void parse_fastq(std::string fastx, std::vector<std::string> queries) {
                 if ( !name.empty() && !content.empty() && !qual.empty()) {
                     bool queryPass = filter_on_name(name, queries);
                     if (queryPass) {
-                        std::cout << name << std::endl << content << std::endl << "+" << qual << std::endl;
+                        std::cout << name << std::endl << content << std::endl << "+" << std::endl << qual << std::endl;
                     }
                 }
                 name = line;
@@ -127,7 +127,7 @@ int main( int argc, char **argv ) {
                     if (!name.empty() && !content.empty() && !qual.empty()) {
                         bool queryPass = filter_on_name(name, queries);
                         if (queryPass) {
-                            std::cout << name << std::endl << content << std::endl << "+" << qual << std::endl;
+                            std::cout << name << std::endl << content << std::endl << "+" << std::endl << qual << std::endl;
                         }
                     }
                     name = line;
