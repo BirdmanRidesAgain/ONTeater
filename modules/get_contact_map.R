@@ -86,7 +86,7 @@ lib_load <- function(libs) {
   message("All packages loaded\n")
 }
 
-libs <- c("pafr", "ggplot2", "magrittr", "dplyr", "stringr", "scales") # list of libs
+libs <- c("pafr", "ggplot2", "magrittr", "dplyr", "stringr", "scales", "readr") # list of libs
 # Load libraries present in system
 check_installed_libs(libs)
 lib_load(libs)
@@ -123,8 +123,8 @@ print_params(args)
   }
   paf <- dplyr::arrange(paf, desc(qlen)) # sort by size
   
-  # Write CSV of filtered alignments
-  write.csv(dplyr::as_tibble(paf), stringr::str_c(args$prefix,"alignments.csv", sep = "_"), row.names=FALSE, quote=FALSE)
+  # Output filtered PAF
+  readr::write_delim(x = dplyr::as_tibble(paf), file = stringr::str_c(args$prefix,"alignments.paf", sep = "_"), delim = "\t")
   
   ###################################################
   ### PLOT ALIGNMENTS ###
@@ -194,7 +194,7 @@ print_params(args)
   # get individual plots of all macro+micro, if we set min_len
     # FIXME - integrate this with micro/macro information if min_len is set
   if (args$contig_plots) {
-    out_dir <- stringr::str_c(getwd(),stringr::str_c(args$prefix,"alignment_plots",sep = "_"),sep="/")
+    out_dir <- stringr::str_c(getwd(),stringr::str_c(args$prefix, "alignment_plots", sep = "_"),sep="/")
     dir.create(out_dir)
     
     if (args$min_len != 0 & FALSE) {
