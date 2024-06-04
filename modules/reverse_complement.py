@@ -97,7 +97,9 @@ def parse_paf(paf):
             # We return the list. The file is closed as a condition of the while loop
         return(aln_lst)
          
-# FIXME - find some way to deal with multi-line fastas MULTI-TRACK DRIFTING
+# FIXME - find some way to deal with multi-line fastas
+# Perl oneliner to go from MULTI-TRACK DRIFTING to single track fasta
+    #perl -pe '/^>/ ? print "\n" : chomp' Falco_peregrinus_best_genome_sorted_renamed.fa | tail -n +2 > new_falcon.fasta
 def parse_fasta(fasta): 
     # initialize a list
     ctg_lst= []
