@@ -104,6 +104,11 @@ def parse_paf(paf):
 def parse_fasta(fasta): 
     # initialize a list
     ctg_lst= []
+    
+    # determine if fasta is single or multiline
+    
+    
+    
     # now, we read in lines and assign each to an Alignment obj. in aln_list
     with open(fasta, 'r') as fa_obj:
         for line, line2 in itertools.zip_longest(fa_obj, fa_obj, fillvalue = None):
@@ -119,58 +124,60 @@ def sortSeq_lst(seq):
 #--------------------------------------------
 # MAIN:
 #--------------------------------------------
-# PARSE ARGS:
-parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--fasta", help = "Supply a .fa file.")
-parser.add_argument("-a", "--paf", help = "Supply a PAF file")
-parser.add_argument("-o", "--output", default = "stdout", help = "Writes output to path provided and suppresses output to stdout.")
-parser.add_argument("-p", "--prefix", default = "output", help = "Prefix for all output files.")
-args = parser.parse_args()
+def main():
+    # PARSE ARGS:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--fasta", help = "Supply a .fa file.")
+    parser.add_argument("-a", "--paf", help = "Supply a PAF file")
+    parser.add_argument("-o", "--output", default = "stdout", help = "Writes output to path provided and suppresses output to stdout.")
+    parser.add_argument("-p", "--prefix", default = "output", help = "Prefix for all output files.")
+    args = parser.parse_args()
 
-
-#--------------------------------------------
-# parse a PAF and give us a list of Alignments in descending order.
-#--------------------------------------------
-aln_lst = parse_paf(args.paf)  
-aln_lst.sort(reverse=True, key=sortSeq_lst)
-
-
-#--------------------------------------------
-# parse a fasta and give us a list of Contigs  in descending order
-#--------------------------------------------
-ctg_lst = parse_fasta(args.fasta)
-ctg_lst.sort(reverse=True, key=sortSeq_lst)
-
- 
-#--------------------------------------------
-# Iterate through the fasta. If the sequence name matches a sequence tagged as '-' in the PAF, reverse complement it.
-#--------------------------------------------
-# generate data frames for both 
-aln_df = pd.DataFrame.from_records(f.to_dict() for f in aln_lst) 
-ctg_df = pd.DataFrame.from_records(f.to_dict() for f in ctg_lst) #this wasn't actually used
-ctg_df["name"]
-    #then subset to only strand = '-'
-# subset the alignment dataframe to only negative alignments over a given length - these are likely to be biologically signiciant
-min_aln_len = 500000
-ctgs_to_reverse = pd.unique(aln_df[(aln_df["strand"] == '-') & (aln_df["length"] >= min_aln_len)]["qname"])  # we could combine this all onto one line, but...
-
-
-# print fa. If the 'name' of ctg is in ctgs_to_reverse, reverse-complement it
-for ctg in ctg_lst:
-    if ctg.name in ctgs_to_reverse:
-        ctg.reverseComplement()
-
-
-#--------------------------------------------
-# Write the fasta object to a file.
-#--------------------------------------------
-# FIXME - figure out how to write this to a file
-
-if args.output == 'stdout':
-    for contig in ctg_lst:
-        print(contig.dumpSeq())# writes to stdout
+    
+    #--------------------------------------------
+    # parse a PAF and give us a list of Alignments in descending order.
+    #--------------------------------------------
+    aln_lst = parse_paf(args.paf)  
+    aln_lst.sort(reverse=True, key=sortSeq_lst)
+    
+    
+    #--------------------------------------------
+    # parse a fasta and give us a list of Contigs  in descending order
+    #--------------------------------------------
+    ctg_lst = parse_fasta(args.fasta)
+    ctg_lst.sort(reverse=True, key=sortSeq_lst)
+    
+     
+    #--------------------------------------------
+    # Iterate through the fasta. If the sequence name matches a sequence tagged as '-' in the PAF, reverse complement it.
+    #--------------------------------------------
+    # generate data frames for both 
+    aln_df = pd.DataFrame.from_records(f.to_dict() for f in aln_lst) 
+    ctg_df = pd.DataFrame.from_records(f.to_dict() for f in ctg_lst) #this wasn't actually used
+    ctg_df["name"]
+        #then subset to only strand = '-'
+    # subset the alignment dataframe to only negative alignments over a given length - these are likely to be biologically signiciant
+    min_aln_len = 500000
+    ctgs_to_reverse = pd.unique(aln_df[(aln_df["strand"] == '-') & (aln_df["length"] >= min_aln_len)]["qname"])  # we could combine this all onto one line, but...
+    
+    
+    # print fa. If the 'name' of ctg is in ctgs_to_reverse, reverse-complement it
+    for ctg in ctg_lst:
+        if ctg.name in ctgs_to_reverse:
+            ctg.reverseComplement()
+    
+    
+    #--------------------------------------------
+    # Write the fasta object to a file.
+    #--------------------------------------------
+    # FIXME - figure out how to write this to a file
+    
+    if args.output == 'stdout':
+        for contig in ctg_lst:
+            print(contig.dumpSeq())# writes to stdout
+            
         
-        
-        
+if __name__ == "__main__":
+    main()
         
         
