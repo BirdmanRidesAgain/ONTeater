@@ -98,7 +98,8 @@ def parse_paf(paf):
         return(aln_lst)
          
 # FIXME - find some way to deal with multi-line fastas
-# Perl oneliner to go from MULTI-TRACK DRIFTING to single track fasta
+# Perl and seqkit oneliners to go from MULTI-TRACK DRIFTING to single track fasta
+    #seqkit sort --by-length --reverse ${INPUT_FASTA} | seqkit replace --pattern '.+' --replacement 'Contig_{nr}' > ${OUTPUT_FASTA}
     #perl -pe '/^>/ ? print "\n" : chomp' Falco_peregrinus_best_genome_sorted_renamed.fa | tail -n +2 > new_falcon.fasta
 def parse_fasta(fasta): 
     # initialize a list
