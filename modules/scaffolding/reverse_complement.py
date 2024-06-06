@@ -1,4 +1,4 @@
-#!/usr/bin/env python.11
+#!/usr/bin/env python3.11
 """
     reverse_compliment.py
     30 May 2024
@@ -85,7 +85,6 @@ class Contig:
         # This is useful for outputting the fasta.
         return f">{self.name}\n{self.seq}\n"
     
- # FIXME - find some way to deal with your stupid headers in your PAF output
 def parse_paf(paf): 
     aln_lst= []
     # now, we read in lines and assign each to an Alignment obj. in aln_list
@@ -99,15 +98,11 @@ def parse_paf(paf):
          
 # FIXME - find some way to deal with multi-line fastas
 # Perl and seqkit oneliners to go from MULTI-TRACK DRIFTING to single track fasta
-    #seqkit sort --by-length --reverse ${INPUT_FASTA} | seqkit replace --pattern '.+' --replacement 'Contig_{nr}' > ${OUTPUT_FASTA}
-    #perl -pe '/^>/ ? print "\n" : chomp' Falco_peregrinus_best_genome_sorted_renamed.fa | tail -n +2 > new_falcon.fasta
+    #seqkit sort --by-length --reverse ${INPUT_FASTA} | seqkit replace --pattern '.+' --replacement 'Contig_{nr}' | > ${OUTPUT_FASTA}
+    #perl -pe '/^>/ ? print "\n" : chomp' ${INPUT_FASTA} | tail -n +2 > ${OUTPUT_FASTA}
 def parse_fasta(fasta): 
     # initialize a list
-    ctg_lst= []
-    
-    # determine if fasta is single or multiline
-    
-    
+    ctg_lst= []    
     
     # now, we read in lines and assign each to an Alignment obj. in aln_list
     with open(fasta, 'r') as fa_obj:
@@ -127,12 +122,23 @@ def sortSeq_lst(seq):
 def main():
     # PARSE ARGS:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--fasta", help = "Supply a .fa file.")
-    parser.add_argument("-a", "--paf", help = "Supply a PAF file")
-    parser.add_argument("-o", "--output", default = "stdout", help = "Writes output to path provided and suppresses output to stdout.")
-    parser.add_argument("-p", "--prefix", default = "output", help = "Prefix for all output files.")
+    parser.add_argument("-f", "--fasta", default = None, help = "Supply a .fa file")
+    parser.add_argument("-a", "--paf", default = None, help = "Supply a PAF file")
+    parser.add_argument("-m", "--min_len", default = 1000, help = "Minimum length for alignments to be reverse-complemented.\nDefault is 1000 - should be set shorter for fragmented or taxonomically distant alignments")
+    parser.add_argument("-o", "--output", default = "stdout", help = "Writes output to path provided. If unset, output written to stdout")
+    parser.add_argument("-p", "--prefix", default = "output", help = "Prefix for all output files")
     args = parser.parse_args()
-
+    
+    #--------------------------------------------
+    # Sanity-check for fasta and PAF arguments
+    #--------------------------------------------
+    if (args.fasta == None or args.paf == None):
+        print("Required inputs not found.")
+        if (args.fasta == None):
+            print("\tPlease provide a fasta")
+        if (args.paf == None):
+            print("\tPlease provide a PAF")
+        return 1
     
     #--------------------------------------------
     # parse a PAF and give us a list of Alignments in descending order.
@@ -157,8 +163,7 @@ def main():
     ctg_df["name"]
         #then subset to only strand = '-'
     # subset the alignment dataframe to only negative alignments over a given length - these are likely to be biologically signiciant
-    min_aln_len = 500000
-    ctgs_to_reverse = pd.unique(aln_df[(aln_df["strand"] == '-') & (aln_df["length"] >= min_aln_len)]["qname"])  # we could combine this all onto one line, but...
+    ctgs_to_reverse = pd.unique(aln_df[(aln_df["strand"] == '-') & (aln_df["length"] >= args.min_len)]["qname"])  # we could combine this all onto one line, but...
     
     
     # print fa. If the 'name' of ctg is in ctgs_to_reverse, reverse-complement it
@@ -169,13 +174,19 @@ def main():
     
     #--------------------------------------------
     # Write the fasta object to a file.
-    #--------------------------------------------
-    # FIXME - figure out how to write this to a file
-    
+    #--------------------------------------------    
     if args.output == 'stdout':
         for contig in ctg_lst:
             print(contig.dumpSeq())# writes to stdout
-            
+    else:
+        filename = args.output + ".fa"
+        with open(filename, 'w') as f:
+            for contig in ctg_lst:
+                print(contig.dumpSeq(), file=f)
+            f.close()
+
+
+    return 0 # End of the main function
         
 if __name__ == "__main__":
     main()
