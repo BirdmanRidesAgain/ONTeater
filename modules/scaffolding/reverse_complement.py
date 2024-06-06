@@ -16,6 +16,7 @@
         If two fragments are mapped to the same fragment, fuse them.
 
 """
+import os
 import argparse
 import itertools
 import pandas as pd
@@ -122,8 +123,8 @@ def sortSeq_lst(seq):
 def main():
     # PARSE ARGS:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--fasta", default = None, help = "Supply a .fa file")
-    parser.add_argument("-a", "--paf", default = None, help = "Supply a PAF file")
+    parser.add_argument("-f", "--fasta", default = "", help = "Supply a .fa file")
+    parser.add_argument("-a", "--paf", default = "", help = "Supply a PAF file")
     parser.add_argument("-m", "--min_len", default = 1000, help = "Minimum length for alignments to be reverse-complemented.\nDefault is 1000 - should be set shorter for fragmented or taxonomically distant alignments")
     parser.add_argument("-o", "--output", default = "stdout", help = "Writes output to path provided. If unset, output written to stdout")
     parser.add_argument("-p", "--prefix", default = "output", help = "Prefix for all output files")
@@ -132,13 +133,23 @@ def main():
     #--------------------------------------------
     # Sanity-check for fasta and PAF arguments
     #--------------------------------------------
+
     if (args.fasta == None or args.paf == None):
-        print("Required inputs not found.")
+        print("Required inputs not found:")
         if (args.fasta == None):
             print("\tPlease provide a fasta")
         if (args.paf == None):
             print("\tPlease provide a PAF")
         return 1
+    if (not os.path.exists(args.fasta) or not os.path.exists(args.paf)):
+        print("Required inputs not found:")
+        if (not os.path.exists(args.fasta)):
+            print("\t" + args.fasta + " does not exist")
+        if (not os.path.exists(args.paf)):
+            print("\t" + args.paf + " does not exist")
+        return 2
+        
+    os.path.exists(args.paf)
     
     #--------------------------------------------
     # parse a PAF and give us a list of Alignments in descending order.
