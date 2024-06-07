@@ -33,18 +33,32 @@ if (args$help) {
     message("\nget_contact_map.R, Keiler Collier, 28 May 2023, v.0.2.0)
   
   Suggested usage: get_contact_map.R --paf <input_paf> --prefix <output_prefix>
-          
+  
+  This is a script designed to visualize whole-genome alignments, filtering out low-quality or spurious alignments as necessary. 
+  By default, it outputs a scatterplot of alignment length and percent divergence (<prefix>_alnlen_scatterplot.png) and a contact map of
+  all query sequences matched to any target sequences (<prefix>_all_alns.png). Target sequences that are not aligned with any query 
+  sequences are not reported- if these are of interest, it is recommended to run and visualize two separate alignments.
+  By default, a filtered .paf file is also output.
+  If the --min_macro option is set to a nonzero value, two additional contact maps are produced- <prefix>_macro_alns.png, for alignments 
+  smaller than the value of --min_macro, and <prefix>_macro_alns.png, for all alignments greater than it.
+  
+  All outputs are written to your working directory. See options below for further detail.
+
+  
   Options: 
           --raw: If set, all alignments are reported in the dotplot and quality filtering is not performed. Any micro/macro bounding remains.
                  It is not recommended to set this, as secondary, short and low-mapping-quality alignments can confound interpretation.
                  If --raw is unset (default behavior), secondary mappings, alignments under 500kbp and alignments with a mapq > 40 are removed.
          
           --min_macro <0>: Takes an integer value and sets the minimum alignment length for an alignment to be mapped. If unset, no micro/macro analyses will be done.
-                Defaults to 0. Suggested boundary between avian macro/microchromosomes is 10 000 000bp. (10000000)
+                Defaults to 0. Suggested boundary between avian macro/microchromosomes is 10 000 000bp. Also accepts scientific notation (eg., 1e7)
           
           --contig_plots: If set, 'n' number of contig-wise alignment plots will be written, where 'n' is the number of high-quality plots in 'Query'.
-                IT IS NOT RECOMMENDED TO RUN THIS WITH --raw.
-          --output_paf: This option outputs a csv of all filtered/plotted alignments. Turned on by default; set to suppress.
+                Running with --raw set to 'TRUE' will suppress this argument.
+                
+          --output_paf: This option outputs a csv of all filtered/plotted alignments. Turned on by default; set to 'FALSE' to suppress.
+                          
+          --prefix: The output prefix used for any plots and figures. Defaults to the prefix of your input.paf file.
           ")
     sink(NULL, type = "message")
     quit()
@@ -56,9 +70,7 @@ if (args$help) {
 # Sanity check for required inputs:
 if (is.null(args$paf)) {
   message("Required inputs missing. See --help for suggested usage.")
-  stop("get_contact_map.R --paf <input_paf> --prefix <output_prefix>
-       OR
-       get_contact_map.R --target <input_fasta> --query <input_fasta> --prefix <output_prefix>", call. = FALSE)
+  stop("get_contact_map.R --paf <input_paf> --prefix <output_prefix>", call. = FALSE)
 }
 
 ###################################################
@@ -107,7 +119,10 @@ if (is.null(args$paf)) {
   quit()
 }
 # silently set prefix to name of PAF is prefix isn't set
-if (is.null(args$prefix)) { args$prefix = stringr::str_split(args$paf, '.paf')[[1]][1] }
+  # FIXME - this doesn't take into account filestrings as input, causing problems in labeling.
+if (is.null(args$prefix)) { 
+  args$prefix = unlist(stringr::str_split(tail(unlist(stringr::str_split(args$paf, '/')), 1), fixed('.')))[1]
+  }
 print_params(args)
 
 
@@ -205,6 +220,7 @@ scatterplot <- paf %>%
 }
 
 # Dotplot of all alignments:
+# FIXME - deconstruct 'pafr::dotplot' so you can make it look better and see how it works
 dotplot_all <- pafr::dotplot(paf, label_seqs = TRUE, order_by = "qstart") + 
   labs(title = stringr::str_c(prefix_plotname, " dotplot all")) +
   theme_bw() +
@@ -230,7 +246,6 @@ if (args$min_macro != 0) {
 }
 
 # get individual plots of all macro+micro, if we set min_macro
-# FIXME - integrate this with micro/macro information if min_macro is set
 if (args$contig_plots) {
   message("Producing individual contig plots: \n")
   if (args$raw == TRUE) {
@@ -291,5 +306,5 @@ if (args$min_macro != 0) {
 }
 
 # Save list of individual contigs:
-message(stringr::str_c("Output written to ", getwd()))
+message(stringr::str_c("Output written to '", getwd(), args$prefix),"*'")
 message("Program terminating")
