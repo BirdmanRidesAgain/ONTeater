@@ -18,10 +18,10 @@ default_args <- list(help = FALSE,
                      #query_lab = "Query",
                      #target_lab = "Target",
                      raw = FALSE,
-                     min_len = 0,
+                     min_macro = 0,
                      contig_plots = FALSE,
                      output_paf = TRUE,
-                     prefix = "output")
+                     prefix = NULL)
 
 args <- R.utils::commandArgs(trailingOnly = TRUE,
                              asValues = TRUE,
@@ -39,7 +39,7 @@ if (args$help) {
                  It is not recommended to set this, as secondary, short and low-mapping-quality alignments can confound interpretation.
                  If --raw is unset (default behavior), secondary mappings, alignments under 500kbp and alignments with a mapq > 40 are removed.
          
-          --min_len <0>: Takes an integer value and sets the minimum alignment length for an alignment to be mapped. If unset, no micro/macro analyses will be done.
+          --min_macro <0>: Takes an integer value and sets the minimum alignment length for an alignment to be mapped. If unset, no micro/macro analyses will be done.
                 Defaults to 0. Suggested boundary between avian macro/microchromosomes is 10 000 000bp. (10000000)
           
           --contig_plots: If set, 'n' number of contig-wise alignment plots will be written, where 'n' is the number of high-quality plots in 'Query'.
@@ -100,12 +100,26 @@ print_params <- function(args) {
   }
   message("")
 }
+
+# Sanity check for missing arguments:
+if (is.null(args$paf)) { 
+  message("PAF file not found. Supply with --paf")
+  quit()
+}
+# silently set prefix to name of PAF is prefix isn't set
+if (is.null(args$prefix)) { args$prefix = stringr::str_split(args$paf, '.paf')[[1]][1] }
 print_params(args)
 
 
 ###################################################
 ### MAIN FUNCTION ###
 ###################################################
+SAM_check <- function(paf_obj, SAM_tag) {
+  # this is a function to sanity-check whether or not an optional SAM-formatted tag is present in your PAF
+  #SAM_tags = c("am","as","bc","bq","cc","cm","co","cp","cq","cs","ct","e2","fi","fs","fz","lb","h0","h1","h2","hi","ih","mc","md","mq","nh","nm","oq","op","oc","pg","pq","pt","pu","qt","q2","r2","rg","rt","sa","sm","tc","u2","uq")
+  return(SAM_tag %in% colnames(paf_obj))
+}
+
 # Read in PAF
 message("Reading in Pairwise mApping Format (PAF): ")
 paf <- pafr::read_paf(args$paf)
@@ -115,20 +129,29 @@ if (args$raw == FALSE) {
   min_clean_aln_len = 5e5 #500000 bp. 
   # Reasonable for most chromosomal-level arrangements; may exclude a couple of micro
   # We can optimize later.
-  paf <- paf %>% dplyr::filter(tp == "P" & alen >= min_clean_aln_len & mapq > 40)
+  paf <- paf %>% 
+    dplyr::filter(alen >= min_clean_aln_len & mapq > 40)
+  
+  # if SAM flags are present, filter them here
+  if (SAM_check(paf, "tp")) {
+    paf <- paf %>%
+      dplyr::filter(tp == "P")
+  }
 }
 paf <- dplyr::arrange(paf, desc(qlen)) # sort by size
 
 # Write CSV of filtered alignments
-if (args$output_paf){
+if (args$output_paf) {
   write_paf <- function(paf_df = paf) {
     # Have to relabel the data frame's columns to it works downstream
-    paf_formatted <- paf_df %>% 
-      dplyr::mutate(tp = stringr::str_c("tp:A:",tp),
-                    cm = stringr::str_c("cm:i:",cm),
-                    s2 = stringr::str_c("s2:i:",s2),
-                    dv = stringr::str_c("dv:f:",dv),
-                    rl = stringr::str_c("rl:i:",rl))
+    if (SAM_check(paf, "tp")) {
+      paf_formatted <- paf_df %>% 
+        dplyr::mutate(tp = stringr::str_c("tp:A:",tp),
+                      cm = stringr::str_c("cm:i:",cm),
+                      s2 = stringr::str_c("s2:i:",s2),
+                      dv = stringr::str_c("dv:f:",dv),
+                      rl = stringr::str_c("rl:i:",rl))
+    } else { paf_formatted = paf_df }
     
     readr::write_delim(x = dplyr::as_tibble(paf_formatted), 
                        file = stringr::str_c(args$prefix,"alignments.paf", sep = "_"), 
@@ -168,6 +191,7 @@ assembly_theme <- theme(
   legend.position = "none")
 
 # Scatterplot of alignment length
+if (SAM_check(paf, "tp")) {
 scatterplot <- paf %>%
   ggplot(aes(x = alen, y = dv, fill = tp)) +
   geom_point(shape = 21, color = "black", cex = 2) +
@@ -178,6 +202,7 @@ scatterplot <- paf %>%
   ylab("Alignment divergence") +
   theme_bw() +
   assembly_theme
+}
 
 # Dotplot of all alignments:
 dotplot_all <- pafr::dotplot(paf, label_seqs = TRUE, order_by = "qstart") + 
@@ -185,11 +210,11 @@ dotplot_all <- pafr::dotplot(paf, label_seqs = TRUE, order_by = "qstart") +
   theme_bw() +
   assembly_theme
 
-# If 'min_len' has been set, make dotplots for micro and macro chromosomes
-if (args$min_len != 0) {
+# If 'min_macro' has been set, make dotplots for micro and macro chromosomes
+if (args$min_macro != 0) {
   # Macrochromosomes
   paf_macro <- paf %>%
-    filter(alen >= args$min_len)
+    filter(alen >= args$min_macro)
   dotplot_macro <- pafr::dotplot(paf_macro, label_seqs = TRUE, order_by = "qstart") +
     labs(title = stringr::str_c(prefix_plotname, " dotplot macro")) +
     theme_bw() +
@@ -197,15 +222,15 @@ if (args$min_len != 0) {
   
   #Microchromosomes
   paf_micro <- paf %>%
-    filter(alen < args$min_len) 
+    filter(alen < args$min_macro) 
   dotplot_micro <- pafr::dotplot(paf_micro, label_seqs = TRUE, order_by="qstart") +
     labs(title = stringr::str_c(prefix_plotname, " dotplot micro")) +
     theme_bw() +
     assembly_theme
 }
 
-# get individual plots of all macro+micro, if we set min_len
-# FIXME - integrate this with micro/macro information if min_len is set
+# get individual plots of all macro+micro, if we set min_macro
+# FIXME - integrate this with micro/macro information if min_macro is set
 if (args$contig_plots) {
   message("Producing individual contig plots: \n")
   if (args$raw == TRUE) {
@@ -217,7 +242,7 @@ if (args$contig_plots) {
     out_dir <- stringr::str_c(getwd(),stringr::str_c(args$prefix, "alignment_plots", sep = "_"),sep="/")
     dir.create(out_dir)
     
-    if (args$min_len != 0 & FALSE) {
+    if (args$min_macro != 0 & FALSE) {
       # FIXME - have some way of tagging which are micro and which are macro
       # Code is effectively commented out right now
     } else {
@@ -251,12 +276,14 @@ if (args$contig_plots) {
 ### SAVE PLOTS TO LOCAL FILESYSTEM ###
 ###################################################
 # Save scatterplot of alignments
-save_plot(plot = scatterplot, filename = stringr::str_c(prefix_filename, "_alnlen_scatterplot.png"), filetype = "png")
+if (SAM_check(paf, "tp")) {
+  save_plot(plot = scatterplot, filename = stringr::str_c(prefix_filename, "_alnlen_scatterplot.png"), filetype = "png")
+}
 
 # Contact map of all alignments
 save_plot(plot = dotplot_all, filename = stringr::str_c(prefix_filename, "_all_alns.png"), filetype = "png")
 # Contact map of micro and macro chromosomes, if applicable
-if (args$min_len != 0) {
+if (args$min_macro != 0) {
   #macro
   save_plot(plot = dotplot_macro, filename = stringr::str_c(prefix_filename, "_macro_alns.png"), filetype = "png")
   #micro
