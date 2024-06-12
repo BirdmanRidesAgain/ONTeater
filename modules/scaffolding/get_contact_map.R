@@ -15,10 +15,10 @@
 ###################################################
 default_args <- list(help = FALSE,
                      paf = NULL,
-                     #query_lab = "Query",
-                     #target_lab = "Target",
+                     q_lab = "Query",
+                     t_lab = "Target",
                      raw = FALSE,
-                     min_macro = 0,
+                     min_macro = 0, # FIXME - this could be set to just, the greater 50% distribution of the contigs
                      contig_plots = FALSE,
                      output_paf = TRUE,
                      prefix = NULL)
@@ -59,6 +59,10 @@ if (args$help) {
           --output_paf: This option outputs a csv of all filtered/plotted alignments. Turned on by default; set to 'FALSE' to suppress.
                           
           --prefix: The output prefix used for any plots and figures. Defaults to the prefix of your input.paf file.
+          
+          --t_lab: The label used for the query aligment of the contact maps. Defaults to \"Target\".
+
+          --q_lab: The label used for the query aligment of the contact maps. Defaults to \"Query\".
           ")
     sink(NULL, type = "message")
     quit()
@@ -221,7 +225,7 @@ scatterplot <- paf %>%
 
 # Dotplot of all alignments:
 # FIXME - deconstruct 'pafr::dotplot' so you can make it look better and see how it works
-dotplot_all <- pafr::dotplot(paf, label_seqs = TRUE, order_by = "qstart") + 
+dotplot_all <- pafr::dotplot(paf, label_seqs = TRUE, order_by = "qstart", xlab = args$q_lab, ylab = args$t_lab) + 
   labs(title = stringr::str_c(prefix_plotname, " dotplot all")) +
   theme_bw() +
   assembly_theme
@@ -234,7 +238,7 @@ if (args$min_macro != 0) {
   if (nrow(paf_macro) == 0) {
     message(stringr::str_c("No alignments greater than", args$min_macro, "found", sep = " "))
   } else {
-    dotplot_macro <- pafr::dotplot(paf_macro, label_seqs = TRUE, order_by = "qstart") +
+    dotplot_macro <- pafr::dotplot(paf_macro, label_seqs = TRUE, order_by = "qstart", xlab = args$q_lab, ylab = args$t_lab) +
       labs(title = stringr::str_c(prefix_plotname, " dotplot macro")) +
       theme_bw() + 
       assembly_theme
@@ -246,7 +250,7 @@ if (args$min_macro != 0) {
   if (nrow(paf_micro) == 0) {
     message(stringr::str_c("No alignments smaller than", args$min_macro, "found", sep = " "))
   } else {
-    dotplot_micro <- pafr::dotplot(paf_micro, label_seqs = TRUE, order_by="qstart") +
+    dotplot_micro <- pafr::dotplot(paf_micro, label_seqs = TRUE, order_by="qstart", xlab = args$q_lab, ylab = args$t_lab) +
       labs(title = stringr::str_c(prefix_plotname, " dotplot micro")) +
       theme_bw() +
       assembly_theme
