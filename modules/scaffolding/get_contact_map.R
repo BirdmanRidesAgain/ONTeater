@@ -231,18 +231,26 @@ if (args$min_macro != 0) {
   # Macrochromosomes
   paf_macro <- paf %>%
     filter(alen >= args$min_macro)
-  dotplot_macro <- pafr::dotplot(paf_macro, label_seqs = TRUE, order_by = "qstart") +
-    labs(title = stringr::str_c(prefix_plotname, " dotplot macro")) +
-    theme_bw() +
-    assembly_theme
-  
+  if (nrow(paf_macro) == 0) {
+    message(stringr::str_c("No alignments greater than", args$min_macro, "found", sep = " "))
+  } else {
+    dotplot_macro <- pafr::dotplot(paf_macro, label_seqs = TRUE, order_by = "qstart") +
+      labs(title = stringr::str_c(prefix_plotname, " dotplot macro")) +
+      theme_bw() + 
+      assembly_theme
+  }
+
   #Microchromosomes
   paf_micro <- paf %>%
     filter(alen < args$min_macro) 
-  dotplot_micro <- pafr::dotplot(paf_micro, label_seqs = TRUE, order_by="qstart") +
-    labs(title = stringr::str_c(prefix_plotname, " dotplot micro")) +
-    theme_bw() +
-    assembly_theme
+  if (nrow(paf_micro) == 0) {
+    message(stringr::str_c("No alignments smaller than", args$min_macro, "found", sep = " "))
+  } else {
+    dotplot_micro <- pafr::dotplot(paf_micro, label_seqs = TRUE, order_by="qstart") +
+      labs(title = stringr::str_c(prefix_plotname, " dotplot micro")) +
+      theme_bw() +
+      assembly_theme
+  }
 }
 
 # get individual plots of all macro+micro, if we set min_macro
@@ -300,9 +308,13 @@ save_plot(plot = dotplot_all, filename = stringr::str_c(prefix_filename, "_all_a
 # Contact map of micro and macro chromosomes, if applicable
 if (args$min_macro != 0) {
   #macro
-  save_plot(plot = dotplot_macro, filename = stringr::str_c(prefix_filename, "_macro_alns.png"), filetype = "png")
+  if (exists("dotplot_macro")) {
+    save_plot(plot = dotplot_macro, filename = stringr::str_c(prefix_filename, "_macro_alns.png"), filetype = "png")
+  }
   #micro
-  save_plot(plot = dotplot_micro, filename = stringr::str_c(prefix_filename, "_micro_alns.png"), filetype = "png")
+  if (exists("dotplot_micro")) {
+    save_plot(plot = dotplot_micro, filename = stringr::str_c(prefix_filename, "_micro_alns.png"), filetype = "png")
+  }
 }
 
 # Save list of individual contigs:
