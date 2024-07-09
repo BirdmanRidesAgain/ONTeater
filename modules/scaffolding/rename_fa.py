@@ -113,7 +113,6 @@ def main():
     parser.add_argument("-r", "--remove", default = False, action= 'store_true', help = "Remove contigs where a new name is not found, instead of ignoring them. False by default; incompatible with -s.")    
     parser.add_argument("-o", "--out_pre", default = "stdout", help = "Writes output to path provided. If unset, output written to stdout")
     args = parser.parse_args()
-    
     # set default of 'sequential' to none. if a person sets the flag with a prefix, it sets a bool in the program to turn on seq. mode
     
     #--------------------------------------------
@@ -146,14 +145,14 @@ def main():
     #--------------------------------------------
     names_df = pd.read_csv(args.names, sep = '\t', names = ["oldname", "newname"])
     names_df["oldname"]
-    names_df["newname"]   
+    names_df["newname"]
     
     #--------------------------------------------
     # Replace contigs found in 'oldname' with 'newname' values
     #--------------------------------------------
     if args.sequential != None:
         unnamed_ctr = 0 # this is a counter for any unnamed contigs. Used when -s is enabled
-    
+
     for i in ctg_lst:
         if i.name in list(names_df["oldname"]):
             # if it's in oldnames, take the corresponding 'oldname' and get its rownum
@@ -168,8 +167,6 @@ def main():
             elif (args.remove): #FIXME - find a way to get ride of contigs
                 i.name = None
 
-            
-            
     #--------------------------------------------
     # Write the fasta object to a file (or stdout)
     #--------------------------------------------
@@ -179,8 +176,7 @@ def main():
             if i.name == None and args.remove == True:
                 del(i)
                 continue
-            print(i.dump())
-            
+            print(i.dump())  
     # Print to files
     else:
         filename = args.out_pre + ".fa" # fasta output
@@ -191,18 +187,7 @@ def main():
                     continue
                 print(i.dump(), file=f)
             f.close()
-
-
-
-
-    
     return 0 # End of the main function
-        
+    
 if __name__ == "__main__":
     main()
-    
-    
-    
-    
-    
-    
