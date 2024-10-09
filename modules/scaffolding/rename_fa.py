@@ -14,10 +14,17 @@
     
 
 """
+#--------------------------------------------
+# Import statements
+#--------------------------------------------
 import argparse
 import os
 import pandas as pd
 
+#--------------------------------------------
+# Classes and helper functions
+#--------------------------------------------
+    
 class Fasta:
     """"This is a class made to hold multiple contigs."""
     def __init__(self, contigs = [], species = None):
@@ -98,6 +105,10 @@ def parse_fasta(fasta):
         ctg_lst.append(Ctg)
     return ctg_lst
 
+
+def write_ctg_names():
+    print("This is a stub")
+    return 0
     
     
 
@@ -107,7 +118,7 @@ def parse_fasta(fasta):
 def main():
     # PARSE ARGS:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--fasta", required = True, help = "Supply a .fa file")
+    parser.add_argument("-f", "--fasta", help = "Supply a .fa file")
     parser.add_argument("-n", "--names", default = None, help = "Supply a TSV file of contig names. Should be formatted as <old_name>\t<new_name>. Unnamed seqs will be renamed as per '-s'")
     parser.add_argument("-s", "--sequential", default = None, help = "Supply a prefix with which to rename your contigs. If no name is given via --names, seqs will be renamed as '<prefix>_1', '<prefix>_2'...")    
     parser.add_argument("-r", "--remove", default = False, action= 'store_true', help = "Remove contigs where a new name is not found, instead of ignoring them. False by default; incompatible with -s.")    
@@ -116,21 +127,38 @@ def main():
     # set default of 'sequential' to none. if a person sets the flag with a prefix, it sets a bool in the program to turn on seq. mode
     
     #--------------------------------------------
-    # Sanity-check for fasta and TSV arguments
+    # Sanity-check for help and fasta arguments
     #--------------------------------------------
-    if (args.fasta == None or args.names == None):
+    # List of contigs can be gotten with 'seqkit', or internal func. here
+    help_message = """ 
+        reverse_compliment.py
+        12 Jun 2024
+
+        Copyright (C) 2024-2025 Keiler Collier
+        
+        Usage: 
+            reverse_compliment.py -f <input.fa> -s <output_prefix> OR
+            reverse_compliment.py -f <input.fa> -n <input.tsv>
+        
+        This is a script designed to rename contigs in an input .fa file, supplying the names from either a .tsv or programmatically.
+        If only a .fa file is given, the contigs will be renamed as 'output_prefix_1', and so forth, in order of size.
+        A .tsv can be provided, in the following format: '<old_name>\t<new_name>', wih one contig on every line.
+        If a contig is present in the fasta but not in the .tsv, it is ignored by default.
+            However, if you enable the -r (--remove) flag, it removes those contigs from the assembly.
+
+    """
+    #if (args.help == True):
+    #    print(help_message)
+    #    exit
+    
+    if (args.fasta == None):
         print("Required inputs not found:")
-        if (args.fasta == None):
-            print("\tPlease provide a fasta (-f or --fasta)")
-        if (args.names == None):
-            print("\tPlease provide a TSV (-n or --names)")
+        print("\tPlease provide a fasta (-f or --fasta)")
         return 1
-    if (not os.path.exists(args.fasta) or not os.path.exists(args.names)):
+    if (not os.path.exists(args.fasta)):
         print("Required inputs not found:")
         if (not os.path.exists(args.fasta)):
             print("\t'" + args.fasta + "' does not exist")
-        if (not os.path.exists(args.names)):
-            print("\t'" + args.names + "' does not exist")
         return 2
     
     
@@ -138,7 +166,31 @@ def main():
     # parse a fasta and give us a list of Contigs. DO NOT SORT.
     #--------------------------------------------
     ctg_lst = parse_fasta(args.fasta)
-    #ctg_lst.sort(reverse=True, key=sortSeq_lst)
+
+    
+    
+    #--------------------------------------------
+    # If no TSV argument is given, sort the fasta by size. return a file of fasta names
+    #--------------------------------------------
+    if (args.names == None):
+        if args.out_pre == 'stdout':
+            for i in ctg_lst:       # fasta output
+                if i.name == None and args.remove == True:
+                    del(i)
+                    continue
+                print(i.name)  
+        # Print to files
+        else:
+            filename = args.out_pre + '.tsv' # tsv output
+            with open(filename, 'w') as f:
+                for i in ctg_lst:
+                    if i.name == None and args.remove == True:
+                        del(i)
+                        continue
+                    print(i.name, file=f)
+                f.close()
+        return 0
+
     
     #--------------------------------------------
     # parse a TSV and give us a list of old/new seqnames
@@ -164,7 +216,7 @@ def main():
             if (args.sequential != None):
                 unnamed_ctr = unnamed_ctr + 1
                 i.name = args.sequential + "_" + str(unnamed_ctr)
-            elif (args.remove): #FIXME - find a way to get ride of contigs
+            elif (args.remove): #FIXME - find a way to get rid of contigs
                 i.name = None
 
     #--------------------------------------------
