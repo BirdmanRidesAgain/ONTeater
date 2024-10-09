@@ -178,7 +178,7 @@ def main():
                 if i.name == None and args.remove == True:
                     del(i)
                     continue
-                print(i.name)  
+                print(f"{i.name}\t{str(i.length)}")  
         # Print to files
         else:
             filename = args.out_pre + '.tsv' # tsv output
@@ -187,7 +187,7 @@ def main():
                     if i.name == None and args.remove == True:
                         del(i)
                         continue
-                    print(i.name, file=f)
+                    print(f"{i.name}\t{str(i.length)}")
                 f.close()
         return 0
 
