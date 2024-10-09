@@ -187,7 +187,7 @@ def main():
                     if i.name == None and args.remove == True:
                         del(i)
                         continue
-                    print(f"{i.name}\t{str(i.length)}")
+                    print(f"{i.name}\t{str(i.length)}", file=f)
                 f.close()
         return 0
 
