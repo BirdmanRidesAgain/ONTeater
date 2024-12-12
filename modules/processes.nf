@@ -1,11 +1,17 @@
 /*
  * KA Collier
  * ONTeater V1 - processes module
- * Feb 21 2024
+ * Started: Feb 21 2024
+ * Last update: May 15 2024
  *
  * Helper script for ONTeater.nf, containing all processes.
  * 
  */
+
+/*
+process REMOVE_CONTAMINANTS {
+    tag "Removing non-eukaryote reads: $sample_id"
+}*/
 
 process NANOPLOT {
     tag "Visualizing $trim_status reads: $sample_id"
@@ -18,11 +24,6 @@ process NANOPLOT {
 
     output:
     path "${sample_id}_${trim_status}_NanoPlot"
-
-    stub:
-    """
-    mkdir "${sample_id}_${trim_status}_NanoPlot"
-    """
 
     script:
     sample_id = sample_id
@@ -50,11 +51,11 @@ process NANOPLOT {
         """ 
     }
 }
-process CHOPPER {
+process NANOFILT {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
     publishDir "results/reads/${trim_status}_reads", mode: 'copy'
-    conda 'bioconda::chopper'
+    conda 'bioconda::nanofilt'
 
     input:
     tuple val(sample_id), val(trim_status), path(reads)
@@ -62,19 +63,14 @@ process CHOPPER {
     output:
     tuple val(sample_id), val(trim_status), path("${sample_id}_${trim_status}.fq.gz")
 
-    stub:
-    """
-    mkdir "${sample_id}_${trim_status}.fq.gz"
-    """
-
     script:
     sample_id = sample_id
+    reads = reads
     trim_status = 'trim'
 
     """
     gunzip -c $reads | \
-    chopper --threads $task.cpus \
-    -q 10 -l 500 --headcrop 10 --tailcrop 10 | \
+    NanoFilt -q 10 -l 500 --headcrop 10 --tailcrop 10 | \
     gzip > ${sample_id}_${trim_status}.fq.gz
     """
 }
@@ -89,22 +85,16 @@ process FLYE {
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")
 
-    stub:
-    sample_id = sample_id
-    assembler = "Flye"
-    """
-    touch "${sample_id}_${assembler}.fa"
-    """
-
     script:
     sample_id = sample_id
     assembler = "Flye"
     num_iter = 3
-    //threads = <figure out how to define threads in groovy>
 
+    // params: threads are now set by the config file, not the process itself
     """
     # set variables:
-    THREADS=\$((\$(nproc) / 2)) # 50% of your available processors. We go hard.
+    THREADS=\$((\$(nproc) / 2)) # 50% of your available processors. We go hard. 
+    # Add some provision here to divide by the number of samples that can be processes
 
     echo "Primary assembly of $sample_id with $assembler"
     echo "\$THREADS allocated"
@@ -126,11 +116,6 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
 
     output:
     path "run.cfg"
-
-    stub:
-    """
-    touch "run.cfg"
-    """
 
     script:
     // Get genome size from the Flye assembly if not defined in params
@@ -155,13 +140,6 @@ process NEXTDENOVO {
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")
 
-    stub:
-    sample_id = sample_id
-    assembler = "nextDenovo"
-    """
-    touch "${sample_id}_${assembler}.fa"
-    """
-
     script: 
     sample_id = sample_id
     assembler = "nextDenovo"
@@ -185,13 +163,6 @@ process RACON {
 
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_racon.fa")
-
-    stub:
-    sample_id = sample_id
-    assembler = assembler
-    """
-    touch "${sample_id}_${assembler}_racon.fa"
-    """
 
     script:
     Integer threads = 20
@@ -222,22 +193,6 @@ process PILON {
     if the two do not match, return the polish channel unchanged
     this is to prevent polishing using the wrong species/dataset
     */
-
-    stub:
-    sample_id = sample_id
-    assembler = assembler
-
-    if (sample_id == sample_id_short) { //only polish if they match
-    //call minimap and pilon here
-    """
-    touch "${sample_id}_${assembler}_racon_pilon.fa"
-    """
-    }
-    else { //nomatch; don't polish with different species
-        """
-        touch "${sample_id}_${assembler}_racon_pilon.fa"
-        """
-    }
 
     script:
     Integer threads = 20

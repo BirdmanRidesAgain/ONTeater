@@ -1,0 +1,7 @@
+{
+  "version": "1.2.4",
+  "date": "2024-11-05T11:44:04.334739501+01:00",
+  "url": "https://github.com/nextflow-io/nf-prov/releases/download/1.2.4/nf-prov-1.2.4.zip",
+  "requires": ">=23.04.0",
+  "sha512sum": "1fc3d60653f5dfd54ab93659f9d506bccb8257ecf317d669e031ffac1d1f17c7eda02df27ea759da9132a0961b7b5ad1307188763641b156ed72b10e85a939eb"
+}

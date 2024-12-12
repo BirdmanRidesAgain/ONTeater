@@ -7,8 +7,11 @@
 !/.gitignore
 
 
-# Ignore NextFlow's 'work' directory
+# Ignore NextFlow's 'work' and 'results' directories
 /work
+/results
 
 # Ignore fasta_QC (auto-generated with operation, not needed for git purposes
 /fasta_QC
+
+# Ignore large .fa files - can't load anything bigger than 100MB to GitHbu
