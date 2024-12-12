@@ -8,6 +8,7 @@ Usage: ./fx_name_filt test_longread_mtDNA.fq output.csv | gzip > test_longread_m
 Usage: zcat test_longread_mtDNA.fq.gz | ./fx_name_filt stdin output.csv | gzip > test_longread_mtDNA_filt.fq.gz
 
  Compile command is: g++ fx_name_filt.cpp -o fx_name_filt
+    OR
 */
 
 /*
@@ -17,7 +18,7 @@ NEEDED FIXES:
 
 // HELPER FUNCTIONS
 std::string get_filetype(std::string fastx, std::string delimiter = "." ) {
-    std::string filetype;
+    std::string filetype; 
     std::string ext = fastx.substr(fastx.find(delimiter) + 1);
     if ( ext == "fasta" || ext == "fa" || ext == "fasta.gz" || ext == "fa.gz" ) {
         filetype = "fa";
@@ -48,7 +49,7 @@ std::vector<std::string> parse_queries(std::string query) { //return a vector of
 bool filter_on_name(std::string line, std::vector<std::string> queries) {
     bool isFound = false;
     for (std::vector<std::string>::iterator i = queries.begin(); i != queries.end(); i++) {
-        if (line.find(*i) != std::string::npos) {
+        if (line.find(*i) != std::string::npos && line.find(*i) + (*i).length() == line.length()) {
             isFound = true;
         }
     }
