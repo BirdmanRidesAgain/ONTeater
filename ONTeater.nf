@@ -41,9 +41,9 @@ include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/pro
 include { //polishing-related
     RACON as RACON_FLYE; RACON as RACON_ND; 
     PILON as PILON_FLYE; PILON as PILON_ND; 
-    QUAST as QUAST_FLYE; QUAST as QUAST_ND; 
+    //QUAST as QUAST_FLYE; QUAST as QUAST_ND; 
     } from './modules/processes.nf'
-include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
+//include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
 
 
 workflow {
