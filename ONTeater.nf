@@ -11,9 +11,10 @@
 log.info """\
     O N T E A T E R - N F   P I P E L I N E
     ===================================
-    Project directory   : $projectDir
-    Input longreads     : ${params.input_rawreads}
-    Input shortreads    : ${params.input_shortreads}
+    Project directory       : $projectDir
+    Input ONT longreads     : ${params.input_ONTreads}
+    Input PacBio longreads  : ${params.input_PBreads}
+    Input shortreads        : ${params.input_shortreads}
     """
     .stripIndent()
 
@@ -43,8 +44,10 @@ include { //polishing-related
     QUAST as QUAST_FLYE; QUAST as QUAST_ND; 
     } from './modules/processes.nf'
 include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
+
+
 workflow {
-    rawreads_ch = Channel.fromList(get_name_file_pair(params.input_rawreads))
+    rawreads_ch = Channel.fromList(get_name_file_pair(params.input_ONTreads))
 
     // Trim and visualize raw longread data
     NANOPLOT_RAW(rawreads_ch)
@@ -56,8 +59,8 @@ workflow {
     trimreads_ch.view()
     pri_asm_flye_ch = FLYE(trimreads_ch)
         // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    //nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
-    //pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
+    pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
 
 
     // Create channel of reads and assembled fastas for Racon polishing

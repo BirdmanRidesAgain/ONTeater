@@ -93,8 +93,7 @@ process FLYE {
     // params: threads are now set by the config file, not the process itself
     """
     # set variables:
-    THREADS=\$((\$(nproc) / 2)) # 50% of your available processors. We go hard. 
-    # Add some provision here to divide by the number of samples that can be processes
+    THREADS=\$((\$(nproc) / 2))
 
     echo "Primary assembly of $sample_id with $assembler"
     echo "\$THREADS allocated"
@@ -125,7 +124,7 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
     }
     """
     # Use sed to edit the appropriate line
-    cat $nextdenovo_conf | sed "s/genome_size = ...g/genome_size = $genome_size/" > run.cfg
+    cat $nextdenovo_conf | sed "s/XXg/${genome_size}g/" > run.cfg
     """
 }
 process NEXTDENOVO {
@@ -152,6 +151,7 @@ process NEXTDENOVO {
     mv \$ASSEMBLY ${sample_id}_${assembler}.fa
     """
 }
+
 process RACON {
     tag "Polishing primary assembly $sample_id ($assembler) with Racon"
     publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
@@ -204,6 +204,7 @@ process PILON {
     """
 }
 
+/*
 process QUAST {
     // This runs Quast on an assembly and returns the assembly+metadata, plus num_ctgs and N50
     tag "Calculating $sample_id ($assembler) N50 and number of contigs with Quast"
@@ -305,3 +306,4 @@ process MOSDEPTH {
     tag "Outputs depth-per-contig stats from input assembly"
 }
 */
+
