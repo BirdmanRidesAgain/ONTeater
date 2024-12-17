@@ -1,0 +1,61 @@
+/*
+process REMOVE_CONTAMINANTS {
+    tag "Removing non-eukaryote reads: $sample_id"
+}*/
+
+/*
+process QUICKMERGE {
+    tag "Merging $sample_id assemblies with Quickmerge"
+    publishDir "results/merged_assemblies", mode: 'copy'
+    conda 'bioconda::quickmerge'
+
+    input:
+    tuple val(sample_id_1), val(assembler_1), val(n50_1), val(num_large_contigs_1), path(fasta_1) //this is flye
+    tuple val(sample_id_2), val(assembler_2), val(n50_2), val(num_large_contigs_2), path(fasta_2) //this is nextDenovo
+
+    output:
+    tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
+
+    stub:
+    sample_id = sample_id_1 //they're all the same sample_id, ffs
+    if (n50_1 > n50_2) {
+        println("$assembler_1 assembly more contiguous. Merging $fasta_2 into $fasta_1")
+        assembler = assembler_1
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """
+    }
+    else { //it's very unlikely that we'll have a tie.
+        println("$assembler_2 assembly more contiguous. Merging $fasta_1 into $fasta_2")
+        assembler = assembler_2
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """ 
+        }
+    }
+ 
+process P_DUPS {
+    tag "Purging haplotypic duplicates from merged $sample_id assembly with Purge_dups"
+    publishDir "results/merged_assemblies", mode: 'copy'
+    conda 'bioconda::purge_dups'
+
+    input:
+    tuple val(sample_id), val(assembler), path(fasta)
+
+    output:
+    tuple val(sample_id), path("${sample_id}_${assembler}_major_merged_purged.fa")
+
+    stub:
+    sample_id = sample_id
+    assembler = assembler
+    //run ONThill wrapper script here - 
+    """
+    touch "${sample_id}_${assembler}_major_merged_purged.fa"
+    """
+}
+
+/*
+process MOSDEPTH {
+    tag "Outputs depth-per-contig stats from input assembly"
+}
+*/
