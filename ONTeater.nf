@@ -40,8 +40,6 @@ include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/
 include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf' //primary assemblers
 include { //polishing-related
     RACON as RACON_FLYE; RACON as RACON_ND; 
-    PILON as PILON_FLYE; PILON as PILON_ND; 
-    //QUAST as QUAST_FLYE; QUAST as QUAST_ND; 
     } from './modules/processes.nf'
 //include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
 
@@ -71,26 +69,6 @@ workflow {
     racon_flye_ch = RACON_FLYE(polish_flye_ch)
     //racon_nd_ch = RACON_ND(polish_nd_ch)
     
-    
-    // Polish with Illumina data if Illumina data is non-null
-        //Illumina reads MUST be paired and named like this: *{1,2}.fq.gz
-        //Illumina sample IDs must also exactly match the longread sample names
-    //shortreads_ch = Channel.fromFilePairs(params.input_shortreads)
-
-    /*
-    if (!shortreads_ch) { println("No shortreads found. Skipping Pilon polishing.")}
-    else {
-        println("Shortreads found: ")
-        println("Polishing assemblies with Pilon")
-
-        polish_flye_ch = PILON_FLYE(racon_flye_ch, shortreads_ch)
-        polish_nd_ch = PILON_ND(racon_nd_ch, shortreads_ch)
-    }
-    */
-    // Use quast to get n50 and number of large fragments for each assembly
-    //quast_flye_ch = QUAST_FLYE(racon_flye_ch)
-    //quast_nd_ch = QUAST_ND(racon_nd_ch)
-
     //merge and purge duplicate contigs
     //merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch)
     //merged_purged_ch = P_DUPS(merged_ch) //replace p_dups call(s) with wrapper script.
