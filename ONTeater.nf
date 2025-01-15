@@ -57,17 +57,17 @@ workflow {
     trimreads_ch.view()
     pri_asm_flye_ch = FLYE(trimreads_ch)
         // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
+    nd_conf_ch = GET_NEXTDENOVO_PARAMS(params.nextdenovo_conf, params.genome_size)
     pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
 
 
     // Create channel of reads and assembled fastas for Racon polishing
     polish_flye_ch = pri_asm_flye_ch.join(trimreads_ch)
-    //polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
+    polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
     
     // Polish and merge genomes
     racon_flye_ch = RACON_FLYE(polish_flye_ch)
-    //racon_nd_ch = RACON_ND(polish_nd_ch)
+    racon_nd_ch = RACON_ND(polish_nd_ch)
     
     //merge and purge duplicate contigs
     //merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch)

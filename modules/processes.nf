@@ -88,7 +88,7 @@ process FLYE {
     // params: threads are now set by the config file, not the process itself
     """
     # set variables:
-    THREADS=\$((\$(nproc) / 2))
+    THREADS=\$(nproc)
 
     echo "Primary assembly of $sample_id with $assembler"
     echo "\$THREADS allocated"
@@ -105,21 +105,26 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
     publishDir 'results'
 
     input:
-    tuple val(sample_id), val(assembler), path(fasta)
-    path nextdenovo_conf
+    //tuple val(sample_id), val(assembler), path(fasta)
+    path(nextdenovo_conf)
+    val(genome_size)
 
     output:
-    path "run.cfg"
+    path("nd_run_goodparams.cfg")
+
 
     script:
-    // Get genome size from the Flye assembly if not defined in params
-    Integer genome_size = params.genome_size
+        // Get genome size from the Flye assembly if not defined in params
+    //not functional yet
+    /*
     if (params.genome_size == null) {
         genome_size = fasta.size()
     }
+    */
+    Integer genome_size = genome_size
     """
     # Use sed to edit the appropriate line
-    cat $nextdenovo_conf | sed "s/XXg/${genome_size}g/" > run.cfg
+    cat $nextdenovo_conf | sed "s/XXg/${genome_size}g/" > nd_run_goodparams.cfg
     """
 }
 process NEXTDENOVO {
@@ -129,7 +134,7 @@ process NEXTDENOVO {
 
     input:
     tuple val(sample_id), val(trim_status), path(reads)
-    path "nextdenovo_conf"
+    path (nextdenovo_conf)
 
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")
@@ -160,7 +165,7 @@ process RACON {
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_racon.fa")
 
     script:
-    Integer threads = 20
+    Integer threads = 80
     sample_id = sample_id
     assembler = assembler
 
