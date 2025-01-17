@@ -131,7 +131,9 @@ process NEXTDENOVO {
     tag "Primary assembly of $sample_id with $assembler"
     conda 'bioconda::nextdenovo'
     label 'parallel'
-
+    maxForks 1
+    cpus Runtime.runtime.availableProcessors()
+    
     input:
     tuple val(sample_id), val(trim_status), path(reads)
     path (nextdenovo_conf)

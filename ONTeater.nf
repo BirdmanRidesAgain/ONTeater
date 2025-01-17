@@ -52,21 +52,19 @@ workflow {
     trimreads_ch = NANOFILT(rawreads_ch) //trim
     trimreads_ch.view()
     NANOPLOT_TRIM(trimreads_ch)
-    
-    // Begin primary assembly
     trimreads_ch.view()
+
+    // Begin primary assembly
+
+    // Flye should run first - nondemanding assembler
     pri_asm_flye_ch = FLYE(trimreads_ch)
-        // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    nd_conf_ch = GET_NEXTDENOVO_PARAMS(params.nextdenovo_conf, params.genome_size)
-    pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
-
-
-    // Create channel of reads and assembled fastas for Racon polishing
     polish_flye_ch = pri_asm_flye_ch.join(trimreads_ch)
-    polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
-    
-    // Polish and merge genomes
     racon_flye_ch = RACON_FLYE(polish_flye_ch)
+
+    // Then nextDenovo - requires parameters and must run without anything else
+    nd_conf_ch = GET_NEXTDENOVO_PARAMS(params.nextdenovo_conf, params.genome_size) // Adds genome size estimate
+    pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
     racon_nd_ch = RACON_ND(polish_nd_ch)
     
     //merge and purge duplicate contigs
