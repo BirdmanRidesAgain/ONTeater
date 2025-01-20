@@ -99,8 +99,6 @@ process FLYE {
     """
 }
 process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper function for NEXTDENOVO itself.
-    // We need to edit this command so that it also changes the nextDenovo resource use.
-        // Otherwise, it's going to crash the Omen and other resource-constrained computers
     tag "Fetching params for NextDenovo assembly of $sample_id"
     publishDir 'results'
 
@@ -177,3 +175,65 @@ process RACON {
     """
 }
 
+process QUAST_MERGE {
+    tag "Determining which $sample_id assembly is most contiguous (Quast)"
+    publishDir "results/primary_assemblies", mode: 'copy'
+    conda 'bioconda::quast'
+
+    input:
+    tuple val(sample_id_1), val(assembler_1), path(fasta_1) //This is Flye
+    tuple val(sample_id_2), val(assembler_2), path(fasta_2) //This is nextDenovo
+
+    output:
+    tuple val(sample_id), path("best_N50_asm.txt")
+
+    script:
+    sample_id = sample_id_1 //FIXME - there needs to be a check here to ensure that ID1 and ID2 are identical
+
+    """
+    # run quast
+    quast -ek $fasta_1 --out ${sample_id_1}_${assembler_1} --no-html
+    quast -ek $fasta_2 --out ${sample_id_2}_${assembler_2} --no-html
+    ASM1_N50=\$(cat ${sample_id_1}_${assembler_1}/report.txt | grep "N50" | awk '{print \$NF}')
+    ASM2_N50=\$(cat ${sample_id_2}_${assembler_2}/report.txt | grep "N50" | awk '{print \$NF}')
+
+    # Compare N50s and output best assembler to textfile
+        # If both are equal, select ASM2 (conventionally nextDenovo)
+    if [ \$ASM1_N50 -gt \$ASM2_N50 ]
+    then
+        echo $assembler_1 > best_N50_asm.txt
+    else
+        echo $assembler_2 > best_N50_asm.txt
+    fi        
+    """
+}
+
+
+process QUICKMERGE {
+    tag "Merging $sample_id assemblies with Quickmerge"
+    publishDir "results/merged_assemblies", mode: 'copy'
+    conda 'bioconda::quickmerge'
+
+    input:
+    tuple val(sample_id_1), val(assembler_1), path(fasta_1) //this is flye
+    tuple val(sample_id_2), val(assembler_2), path(fasta_2) //this is nextDenovo
+    tuple val(sample_id), path(best_N50_asm) //this is a textfile bc restrictions with channels
+
+    output:
+    tuple val(sample_id), path("merged_${sample_id_1}_${assembler_1}_major.fasta")
+    //tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
+
+    script:
+    if (sample_id_1 == sample_id_2)
+        sample_id = sample_id_1
+        """
+        ASM_MAJOR=\$(cat $best_N50_asm)
+        if [ \$ASM_MAJOR == $assembler_1 ]
+        then
+            merge_wrapper.py -pre ${sample_id_1}_${assembler_1}_major $fasta_1 $fasta_2
+        else
+            merge_wrapper.py -pre ${sample_id_2}_${assembler_2}_major $fasta_2 $fasta_1
+        fi
+        """
+        //find a way to raise an error if this fucks up       
+}

@@ -41,8 +41,8 @@ include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/pro
 include { //polishing-related
     RACON as RACON_FLYE; RACON as RACON_ND; 
     } from './modules/processes.nf'
-//include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
-
+include { QUAST_MERGE; QUICKMERGE } from './modules/processes.nf' //merged assembly-related
+//include { P_DUPS } from './modules/processes.nf'
 
 workflow {
     rawreads_ch = Channel.fromList(get_name_file_pair(params.input_ONTreads))
@@ -68,8 +68,8 @@ workflow {
     racon_nd_ch = RACON_ND(polish_nd_ch)
     
     //merge and purge duplicate contigs
-    //merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch)
-    //merged_purged_ch = P_DUPS(merged_ch) //replace p_dups call(s) with wrapper script.
+    best_asm_ch = QUAST_MERGE(polish_flye_ch, polish_nd_ch)
+    merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch, best_asm_ch)
     
     // QC AND VISUALIZE ASSEMBLED GENOME:
         /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
