@@ -69,7 +69,7 @@ workflow {
     
     //merge and purge duplicate contigs
     best_asm_ch = QUAST_MERGE(polish_flye_ch, polish_nd_ch)
-    merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch, best_asm_ch)
+    merged_ch = QUICKMERGE(polish_flye_ch, polish_nd_ch, best_asm_ch)
     
     // QC AND VISUALIZE ASSEMBLED GENOME:
         /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
