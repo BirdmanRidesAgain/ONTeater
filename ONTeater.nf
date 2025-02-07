@@ -53,31 +53,29 @@ include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/
 include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf' //primary assemblers
 include { RACON as RACON_FLYE; RACON as RACON_ND; } from './modules/processes.nf' //polishing-related
 include { QUAST_MERGE; QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
-//include { P_DUPS } from './modules/processes.nf'
+include { QC_QUAST } from './modules/processes.nf' //merged assembly-related
 
 workflow {
 // INTRODUCTORY BEHAVIOR
     //CHECK INPUT PARAMETERS:
-    //almost everything requires reads
-    if (params.workflow != 'qc') {
-        if (params.ONT_raw == null & params.PB_raw == null) { 
-            error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw." 
-            }
+    //everything requires reads
+    if (params.ONT_raw == null & params.PB_raw == null) { 
+        error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw." 
     }
-
-    // FIXME - this needs to become an 'input' channel, which can then be edited to process different read combos
+    
+    //Define our rawread channel and set our initial complement of actions
+        // FIXME - this needs to become an 'input' channel, which can then be edited to process different read combos
     rawreads_ch = Channel.from(get_name_file_pair(params.ONT_raw))
 
+    // This block checks what processes and inputs we need based on the workflow
     // Full complement of processes- desired behavior when workflow='run'
     DO_TRIM=true; DO_ASSEMBLE=true; DO_MERGE = true; DO_P_DUPS = true; DO_QC = true
-
-    // This block checks what processes and inputs we need based on the workflow
     if (params.workflow != "run") {
-        //This is really only used when you're running 'merge', 'pdups' or 'qc' as solo items
-        // 'sample_id' is needed to make certain tuples work
+        //'sample_id' is needed to make certain tuples work. Only required if you're not using 'run'
         def sample_id 
         sample_id = get_sample_id(params.ONT_raw)
 
+        // FIXME - please make this more comprehensible; you repeat yourself way too much
         if (params.workflow == 'trim') {
             println "Identical workflow to 'run"
         } else if (params.workflow == "assemble") {
@@ -154,13 +152,19 @@ workflow {
 
     if (DO_QC) {
         // QC AND VISUALIZE ASSEMBLED GENOME:
-        /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
+        /*
+        // these are linked so we can assess weird mapping depths
+        depth_assess_ch = MOSDEPTH(merged_purged_ch)
         visual_output_ch = VISUALIZE(merged_purged_ch, depth_assess_ch)
-        calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
+        */
+        println "This is when QC output is generated"
+        QC_COMPLEASM(merge_purge_ch)
+        
+        /*calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
         all called from ./modules/helper_scripts
         outputs .pdfs of relevant stats
         */
     }
-
+*
 }
