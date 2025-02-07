@@ -248,14 +248,14 @@ process P_DUPS {
     conda 'bioconda::purge_dups'
 
     input:
-    tuple val(sample_id_1), path(fasta)
-    tuple val(sample_id_2), val(trim_status), path(reads) // we do not need to have the sample ID here; the second one isn't used. Just here b/c easier to have it.
+    tuple val(sample_id_fa), path(fasta)
+    tuple val(sample_id_rds), val(trim_status), path(reads) // we do not need to have the sample ID here; the second one isn't used. Just here b/c easier to have it.
 
     output:
-    tuple val(sample_id), path("${sample_id}_merged_purged.fa")
+    tuple val(sample_id), path("${sample_id}_merged.purged.fa")
 
     script:
-    sample_id = sample_id_1
+    sample_id = sample_id_rds
     Integer threads = 80
 
     //run ONTeater wrapper script here - 
@@ -268,7 +268,7 @@ process P_DUPS {
     pbcstat \$INPUT_PAF #produces PB.stat and PB.base.cov
     calcuts PB.stat > cutoffs 2> calcuts.log
     split_fa $fasta > \$INPUT_SPLIT
-    minimap2 -t $threads -x asm5 -DP \$INPUT_SPLIT | pigz -c > \$SPLIT_PAF
+    minimap2 -t $threads -x asm5 -DP \$INPUT_SPLIT \$INPUT_SPLIT | pigz -c > \$SPLIT_PAF
 
     purge_dups -2 -T cutoffs -c PB.base.cov \$SPLIT_PAF > dups.bed 2> purge_dups.log
     get_seqs dups.bed -e $fasta -p ${sample_id}_merged

@@ -68,17 +68,16 @@ workflow {
     // FIXME - this needs to become an 'input' channel, which can then be edited to process different read combos
     rawreads_ch = Channel.from(get_name_file_pair(params.ONT_raw))
 
-
-    //This is really only used when you're running 'merge', 'pdups' or 'qc' as solo items
-    def sample_id 
-    sample_id = get_sample_id(params.ONT_raw)
-
-
     // Full complement of processes- desired behavior when workflow='run'
     DO_TRIM=true; DO_ASSEMBLE=true; DO_MERGE = true; DO_P_DUPS = true; DO_QC = true
 
     // This block checks what processes and inputs we need based on the workflow
     if (params.workflow != "run") {
+        //This is really only used when you're running 'merge', 'pdups' or 'qc' as solo items
+        // 'sample_id' is needed to make certain tuples work
+        def sample_id 
+        sample_id = get_sample_id(params.ONT_raw)
+
         if (params.workflow == 'trim') {
             println "Identical workflow to 'run"
         } else if (params.workflow == "assemble") {
