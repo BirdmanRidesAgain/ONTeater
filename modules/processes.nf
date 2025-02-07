@@ -2,7 +2,7 @@
  * KA Collier
  * ONTeater V1 - processes module
  * Started: Feb 21 2024
- * Last update: May 15 2024
+ * Last update: Feb 4 2025
  *
  * Helper script for ONTeater.nf, containing all processes.
  * 
@@ -22,6 +22,7 @@ process NANOPLOT {
 
     script:
     sample_id = sample_id
+    //tool = "nanoplot" not actually needed here but included for consistency
     trim_status = trim_status
 
     """
@@ -60,6 +61,7 @@ process NANOFILT {
 
     script:
     sample_id = sample_id
+    tool = "nanofilt"
     reads = reads
     trim_status = 'trim'
 
@@ -167,6 +169,7 @@ process RACON {
     script:
     Integer threads = 80
     sample_id = sample_id
+    tool = "racon"
     assembler = assembler
 
     """
@@ -236,4 +239,38 @@ process QUICKMERGE {
         fi
         """
         //find a way to raise an error if this fucks up       
+}
+
+
+process P_DUPS {
+    tag "Purging haplotypic duplicates from merged $sample_id assembly with purge_dups"
+    publishDir "results/merged_assemblies", mode: 'copy'
+    conda 'bioconda::purge_dups'
+
+    input:
+    tuple val(sample_id_1), path(fasta)
+    tuple val(sample_id_2), val(trim_status), path(reads) // we do not need to have the sample ID here; the second one isn't used. Just here b/c easier to have it.
+
+    output:
+    tuple val(sample_id), path("${sample_id}_merged_purged.fa")
+
+    script:
+    sample_id = sample_id_1
+    Integer threads = 80
+
+    //run ONTeater wrapper script here - 
+    """
+    INPUT_PAF=${sample_id}.paf.gz
+    INPUT_SPLIT=${sample_id}.split
+    SPLIT_PAF=${sample_id}.split.self.paf.gz
+
+    minimap2 -t $threads -x map-ont $fasta $reads | pigz > \$INPUT_PAF
+    pbcstat \$INPUT_PAF #produces PB.stat and PB.base.cov
+    calcuts PB.stat > cutoffs 2> calcuts.log
+    split_fa $fasta > \$INPUT_SPLIT
+    minimap2 -t $threads -x asm5 -DP \$INPUT_SPLIT | pigz -c > \$SPLIT_PAF
+
+    purge_dups -2 -T cutoffs -c PB.base.cov \$SPLIT_PAF > dups.bed 2> purge_dups.log
+    get_seqs dups.bed -e $fasta -p ${sample_id}_merged
+    """
 }
