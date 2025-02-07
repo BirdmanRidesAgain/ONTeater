@@ -146,9 +146,12 @@ workflow {
 
     if (DO_P_DUPS) {
         merge_purge_ch = P_DUPS(merge_ch, trimreads_ch)
+    } else {
+        // pass along the new channel name to go into QC step
+        merge_purge_ch = merge_ch
     }
 
-    /*
+
     if (DO_QC) {
         // QC AND VISUALIZE ASSEMBLED GENOME:
         /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
@@ -157,6 +160,7 @@ workflow {
         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
         all called from ./modules/helper_scripts
         outputs .pdfs of relevant stats
+        */
     }
-    */
+
 }

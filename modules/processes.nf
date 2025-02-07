@@ -241,7 +241,6 @@ process QUICKMERGE {
         //find a way to raise an error if this fucks up       
 }
 
-
 process P_DUPS {
     tag "Purging haplotypic duplicates from merged $sample_id assembly with purge_dups"
     publishDir "results/merged_assemblies", mode: 'copy'
