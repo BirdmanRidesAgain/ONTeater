@@ -160,6 +160,7 @@ workflow {
         */
         println "This is when QC output is generated"
         QC_QUAST(merge_purge_ch)
+        QC_COMPLEASM(merge_purge_ch, params.BUSCO_lineage)
         
         /*calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination

@@ -1,7 +1,7 @@
 // QC STEPS BELOW HERE
 process QC_QUAST {
     tag "Assessing final $sample_id assembly contiguity with Quast"
-    publishDir "results/QC", mode: 'copy'
+    publishDir "results/${sample_id}/QC", mode: 'copy'
     conda 'bioconda::quast'
 
     input:
@@ -22,20 +22,24 @@ process QC_QUAST {
 
 process QC_COMPLEASM {
     tag "Assessing final $sample_id assembly completeness with compleasm"
-    publishDir "results/QC", mode: 'copy'
+    publishDir "results/${sample_id}/QC", mode: 'copy'
     conda 'bioconda::compleasm'
 
     input:
     tuple val(sample_id), path(fasta)
+    val(BUSCO_lineage)
 
     output:
-    tuple val(sample_id), path("${sample_id}_final_quast_report.txt")
+    tuple val(sample_id), path("${sample_id}_summary.txt")
 
     script:
     sample_id = sample_id
+    lineage=BUSCO_lineage
+    threads=40
 
     """
-    # run compleasm
-    echo "stuff goes here"
+    # RUN COMPLEASM ON ASSEMBLY
+    compleasm run -a $fasta -o ${sample_id}_compleasm -l $lineage -t $threads
+    mv summary.txt ${sample_id}_summary.txt
     """
 }

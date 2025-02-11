@@ -11,7 +11,7 @@
 process NANOPLOT {
     tag "Visualizing $trim_status reads: $sample_id"
     cpus 10
-    publishDir "results/reads/read_stats/${trim_status}/", mode: 'copy'
+    publishDir "results/${sample_id}/reads/read_stats/${trim_status}/", mode: 'copy'
     conda 'bioconda::nanoplot'
 
     input:
@@ -50,7 +50,7 @@ process NANOPLOT {
 process NANOFILT {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
-    publishDir "results/reads/${trim_status}_reads", mode: 'copy'
+    publishDir "results/${sample_id}/reads/${trim_status}_reads", mode: 'copy'
     conda 'bioconda::nanofilt'
 
     input:
@@ -156,7 +156,7 @@ process NEXTDENOVO {
 
 process RACON {
     tag "Polishing primary assembly $sample_id ($assembler) with Racon"
-    publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
+    publishDir "results/${sample_id}/primary_assemblies/${assembler}", mode: 'copy'
     conda 'bioconda::racon bioconda::minimap2'
     label 'parallel'
 
@@ -180,7 +180,7 @@ process RACON {
 
 process QUAST_MERGE {
     tag "Determining which $sample_id assembly is most contiguous (Quast)"
-    publishDir "results/primary_assemblies", mode: 'copy'
+    publishDir "results/${sample_id}/primary_assemblies", mode: 'copy'
     conda 'bioconda::quast'
 
     input:
@@ -214,7 +214,7 @@ process QUAST_MERGE {
 
 process QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
-    publishDir "results/merged_assemblies", mode: 'copy'
+    publishDir "results/${sample_id}/merged_assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
 
     input:
@@ -243,7 +243,7 @@ process QUICKMERGE {
 
 process P_DUPS {
     tag "Purging haplotypic duplicates from merged $sample_id assembly with purge_dups"
-    publishDir "results/merged_assemblies", mode: 'copy'
+    publishDir "results/${sample_id}/merged_assemblies", mode: 'copy'
     conda 'bioconda::purge_dups'
 
     input:
