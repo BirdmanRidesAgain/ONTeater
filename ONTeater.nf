@@ -49,11 +49,12 @@ def get_sample_id(paths) {
 }
 
 //include { REMOVE_CONTAMINANTS } from './modules/processes.nf' //initial filtering for contaminants
-include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/processes.nf' //nanoplot-related
-include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf' //primary assemblers
-include { RACON as RACON_FLYE; RACON as RACON_ND; } from './modules/processes.nf' //polishing-related
-include { QUAST_MERGE; QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
-include { QC_QUAST } from './modules/processes.nf' //merged assembly-related
+include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM; NANOFILT;  //nanoplot-related
+    FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO;  //primary assemblers
+    RACON as RACON_FLYE; RACON as RACON_ND;  //polishing-related
+    QUAST_MERGE; QUICKMERGE; P_DUPS;  //merged assembly-related
+} from './modules/assembly_processes.nf'
+include { QC_QUAST } from './modules/qc_processes.nf' //merged assembly-related
 
 workflow {
 // INTRODUCTORY BEHAVIOR
@@ -158,7 +159,7 @@ workflow {
         visual_output_ch = VISUALIZE(merged_purged_ch, depth_assess_ch)
         */
         println "This is when QC output is generated"
-        QC_COMPLEASM(merge_purge_ch)
+        QC_QUAST(merge_purge_ch)
         
         /*calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
@@ -166,5 +167,4 @@ workflow {
         outputs .pdfs of relevant stats
         */
     }
-*
 }
