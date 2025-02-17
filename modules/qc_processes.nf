@@ -40,6 +40,6 @@ process QC_COMPLEASM {
     """
     # RUN COMPLEASM ON ASSEMBLY
     compleasm run -a $fasta -o ${sample_id}_compleasm -l $lineage -t $threads
-    mv summary.txt ${sample_id}_summary.txt
+    mv ${sample_id}_compleasm/summary.txt ${sample_id}_summary.txt
     """
 }
