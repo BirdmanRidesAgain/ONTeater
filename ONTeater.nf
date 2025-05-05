@@ -48,20 +48,49 @@ def get_sample_id(paths) {
     return name_list
 }
 
+def print_help() {
+    //Prints out ONTeater instructions.
+    log.info"""
+    Basic Usage:
+    nextflow run ONTeater.nf [--ONT_raw OR --PB_raw]
+    
+    Options:
+        --help          Flag. Show this help message and exit
+        --genome_size   Float; default 1.0. Genome size in GB
+        --BUSCO_lineage String; default null (ie, compleasm auto-lineage). See https://busco.ezlab.org/list_of_lineages.html for acceptable list
+        --workflow      String; default 'run'. Determines start point of workflow; valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'
+        --flye_asm      String; default null. Used in 'merge', 'pdups' and 'qc' workflows.
+        --nd_asm        String; default null. Used in 'merge', 'pdups' and 'qc' workflows.
+        --trace         Flag. Nextflow-native; produces a trace of the run.
+        --report        String. Nextflow-native; produces a runtime report with the supplied name.
+
+    Notes:
+        The only mandatory option is either --ONT_raw or --PB_raw. The assembler also accepts both at the same time.
+        Any errors (of which there are probably many) should be reported to https://github.com/BirdmanRidesAgain.
+    
+        The 'workflow' parameter is likely to be particularly buggy- this was a feature implemented for testing purposes.
+    """.stripIndent()
+}
+
 //include { REMOVE_CONTAMINANTS } from './modules/processes.nf' //initial filtering for contaminants
 include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM; NANOFILT;  //nanoplot-related
     FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO;  //primary assemblers
     RACON as RACON_FLYE; RACON as RACON_ND;  //polishing-related
     QUAST_MERGE; QUICKMERGE; P_DUPS;  //merged assembly-related
 } from './modules/assembly_processes.nf'
-include { QC_QUAST } from './modules/qc_processes.nf' //merged assembly-related
+include { QC_QUAST; QC_COMPLEASM } from './modules/qc_processes.nf' //merged assembly-related
 
 workflow {
 // INTRODUCTORY BEHAVIOR
+    if (params.help) {
+        print_help()
+        exit 0
+    }
     //CHECK INPUT PARAMETERS:
     //everything requires reads
     if (params.ONT_raw == null & params.PB_raw == null) { 
-        error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw." 
+        error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw or see --help." 
+        print_help()
     }
     
     //Define our rawread channel and set our initial complement of actions
