@@ -38,14 +38,10 @@ def get_name_file_pair(paths) {
     return combined_list
 }
 
-def get_sample_id(paths) {
+def get_sample_id(String path) {
     //Helper function to provide a channel of sample names. Avoids tuple issues when only running parts of pipeline.
-    path_list = files(paths)
-    int num_files = path_list.size
-
-    def name_list = []
-    path_list.each { name_list.add(it.getSimpleName()) } // adds each filename to a new list
-    return name_list
+    def infile = file(path)
+    return infile.getSimpleName()
 }
 
 def print_help() {
@@ -56,6 +52,8 @@ def print_help() {
     
     Options:
         --help          Flag. Show this help message and exit
+        --ONT_raw       String; default null. A gzipped file of ONT reads used for assembly. Can be used with --PB_raw.
+        --PB_raw        String; default null. A gzipped file of PacBio reads used for assembly. Can be used with --ONT_raw.
         --genome_size   Float; default 1.0. Genome size in GB
         --BUSCO_lineage String; default null (ie, compleasm auto-lineage). See https://busco.ezlab.org/list_of_lineages.html for acceptable list
         --workflow      String; default 'run'. Determines start point of workflow; valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'
@@ -90,7 +88,6 @@ workflow {
     //everything requires reads
     if (params.ONT_raw == null & params.PB_raw == null) { 
         error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw or see --help." 
-        print_help()
     }
     
     //Define our rawread channel and set our initial complement of actions
@@ -102,7 +99,6 @@ workflow {
     DO_TRIM=true; DO_ASSEMBLE=true; DO_MERGE = true; DO_P_DUPS = true; DO_QC = true
     if (params.workflow != "run") {
         //'sample_id' is needed to make certain tuples work. Only required if you're not using 'run'
-        def sample_id 
         sample_id = get_sample_id(params.ONT_raw)
 
         // FIXME - please make this more comprehensible; you repeat yourself way too much
@@ -126,8 +122,7 @@ workflow {
             }
             DO_TRIM=false; DO_ASSEMBLE=false; DO_MERGE = false; DO_P_DUPS = false;
         } else { 
-            println "Invalid workflow." 
-            println "Valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'."
+            error "Invalid workflow. Valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'."
         }
     }
 
@@ -136,7 +131,6 @@ workflow {
         // Trim and visualize raw longread data
         NANOPLOT_RAW(rawreads_ch)
         trimreads_ch = NANOFILT(rawreads_ch)
-        //trimreads_ch.view()
         NANOPLOT_TRIM(trimreads_ch)
     } else {
         //recreate the assembly channels from parameter input
@@ -156,7 +150,7 @@ workflow {
         racon_nd_ch = RACON_ND(polish_nd_ch)
     }
     else {
-        flye_tup = new Tuple3 ("$sample_id", 'Flye', files(params.flye_asm))
+        flye_tup = new Tuple3 (sample_id, 'Flye', files(params.flye_asm))
         polish_flye_ch = Channel.of(flye_tup)
         nd_tup = new Tuple3 ("$sample_id", 'nextDenovo', files(params.nd_asm))
         polish_nd_ch = Channel.of(nd_tup)
@@ -187,10 +181,8 @@ workflow {
         depth_assess_ch = MOSDEPTH(merged_purged_ch)
         visual_output_ch = VISUALIZE(merged_purged_ch, depth_assess_ch)
         */
-        println "This is when QC output is generated"
         QC_QUAST(merge_purge_ch)
-        QC_COMPLEASM(merge_purge_ch, params.BUSCO_lineage)
-        
+        QC_COMPLEASM(merge_purge_ch)
         /*calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
         all called from ./modules/helper_scripts

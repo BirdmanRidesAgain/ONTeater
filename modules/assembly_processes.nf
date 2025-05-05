@@ -11,7 +11,7 @@
 process NANOPLOT {
     tag "Visualizing $trim_status reads: $sample_id"
     cpus 10
-    publishDir "results/${sample_id}/reads/read_stats/${trim_status}/", mode: 'copy'
+    publishDir "results/reads/read_stats/${trim_status}/", mode: 'copy'
     conda 'bioconda::nanoplot'
 
     input:
@@ -50,7 +50,7 @@ process NANOPLOT {
 process NANOFILT {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
-    publishDir "results/${sample_id}/reads/${trim_status}_reads", mode: 'copy'
+    publishDir "results/reads/${trim_status}_reads", mode: 'copy'
     conda 'bioconda::nanofilt'
 
     input:
@@ -156,7 +156,7 @@ process NEXTDENOVO {
 
 process RACON {
     tag "Polishing primary assembly $sample_id ($assembler) with Racon"
-    publishDir "results/${sample_id}/primary_assemblies/${assembler}", mode: 'copy'
+    publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
     conda 'bioconda::racon bioconda::minimap2'
     label 'parallel'
 
@@ -180,7 +180,7 @@ process RACON {
 
 process QUAST_MERGE {
     tag "Determining which $sample_id assembly is most contiguous (Quast)"
-    publishDir "results/${sample_id}/primary_assemblies", mode: 'copy'
+    publishDir "results/primary_assemblies", mode: 'copy'
     conda 'bioconda::quast'
 
     input:
@@ -214,7 +214,7 @@ process QUAST_MERGE {
 
 process QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
-    publishDir "results/${sample_id}/merged_assemblies", mode: 'copy'
+    publishDir "results/merged_assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
 
     input:
@@ -227,7 +227,7 @@ process QUICKMERGE {
     //tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
 
     script:
-    if (sample_id_1 == sample_id_2)
+    if (sample_id_1 == sample_id_2) //checks to see that the assemblies we're merging are the same animal.
         sample_id = sample_id_1
         """
         ASM_MAJOR=\$(cat $best_N50_asm)
@@ -243,7 +243,7 @@ process QUICKMERGE {
 
 process P_DUPS {
     tag "Purging haplotypic duplicates from merged $sample_id assembly with purge_dups"
-    publishDir "results/${sample_id}/merged_assemblies", mode: 'copy'
+    publishDir "results/merged_assemblies", mode: 'copy'
     conda 'bioconda::purge_dups'
 
     input:
