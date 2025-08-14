@@ -86,7 +86,7 @@ workflow {
     }
     //CHECK INPUT PARAMETERS:
     //everything requires reads
-    if (params.ONT_raw == null & params.PB_raw == null) { 
+    if (params.ONT_raw == null & params.PB_raw == null) {
         error "Long reads required for 'run', 'trim', 'assemble', 'merge' and 'pdups' modes. Set --ONT_raw or --PB_raw or see --help." 
     }
     
@@ -169,7 +169,6 @@ workflow {
     if (DO_P_DUPS) {
         merge_purge_ch = P_DUPS(merge_ch, trimreads_ch)
     } else {
-        // pass along the new channel name to go into QC step
         merge_purge_ch = merge_ch
     }
 
