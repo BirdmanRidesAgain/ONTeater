@@ -14,12 +14,17 @@ nextflow run ONTeater.nf --ONT_raw <input.fq.gz> --genome_size 1.1 --BUSCO_linea
 ```
 
 ## Options
-Man
-| Option    | Default | |
-| -------- | ------- | --- |
-| January  | $250    |    |
-| February | $80     |    |
-| March    | $420    |    |
+All native options in `NextFlow` are usable in `ONTeater`.
+Notably, `--trace` and `--report` are useful.
+| Option | Default | Data type | Description |
+| -- | -- | -- | -- |
+| `--help`  | NA | Flag | Set to print a help message and exit. |
+| `--ONT_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--PB_raw`. |
+| `--PB_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--ONT_raw`. |
+| `--genome_size` | `1` | Float | A value representing genome size in gigabasepairs (g). The value does not need to be precise, and can be approximated to nearest 10th - eg, `3.2` for a human. |
+| `--workflow` | `run` | String | The workflow you would like to run; default is 'run' to perform all tasks. Valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'. |
+| `--flye_asm` | `null` | String | A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
+| `--nd_asm` | `null` | String | A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
 
 ## High-level Description
 The `ONTeater` assembly pipeline takes ONT data as an input, optionally accepting PacBio and Illumina-like paired short reads as supplemental data sources.
@@ -31,28 +36,55 @@ These produce different graph walks (and hence, assemblies) throughout the same 
 These two ‘primary assemblies’ are individually polished with `Racon` (v.1.5.0; Vaser et al. 2017), as well as `Pilon` (v.1.24; Walker et al. 2014), if Illumina-like shortreads are provided.
 
 The two assemblies are then merged using `quickmerge` (v.0.3; Chakraborty et al. 2016), using the least contiguous (as measured by N50) assembly to patch gaps in the more contiguous.
+
 We then use `purge_dups` (v.1.2.6; Guan et al. 2020) to attempt to collapse the assembly to a single haplotype.
 Finally, a battery of QC tools, including but not limited to `QUAST` (v.5.2.0; Gurevich et al. 2013), `Compleasm` (v.0.2.6; Huang and Li 2023) and several in-home `Python` and `R` scripts compute summary statistics and produce figures of assembly contiguity.
-Results are then written to a final output directory (`results/`) for the end-user to consume.
+Results are then written to a final output directory (`${sequence_id}_results/`) for the end-user to consume.
+
+### Outputs
+
+Important outputs are:
+| Description | Path |
+| -- | -- |
+| Raw read summary statistics | `${sample_id}_results/reads/read_stats/raw/` |
+| Trim read summary statistics | `${sample_id}_results/reads/read_stats/trim/` |
+| Trimmed reads |  `${sample_id}_results/reads` |
+| Polished assemblies |  `${sample_id}_results/assemblies"` |
+| Merged assembly |  `${sample_id}_results/assemblies"` |
+| Merged-purged assembly |  `${sample_id}_results/assemblies"` |
 
 ### Flowchart
+
 <img title="a title" alt="Alt text" src="./ONTeater_flowchart.png" width=800>
 
 
 ## Known limitations
 
 ## Installation and requirements
+
 ### Installation
-The pipeline includes three dependencies: [NextFlow](https://www.nextflow.io/docs/latest/getstarted.html), and [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
+The pipeline includes two dependencies: [NextFlow](https://www.nextflow.io/docs/latest/getstarted.html), and [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 You will need to install all three of these for the pipeline to run.
 [Docker](https://docs.docker.com/engine/install/) and [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html) are not currently supported, but a `Docker` port is in the works.
 
 ### Requirements
-The ONTeater pipeline is computationally heavy, but effective in recovering roughly psuedochromosomal contigs given sufficient long-read data.
-We conventionally define this as >30x coverage.
+
+The ONTeater pipeline is computationally heavy, but does not require GPU support to function.
+The pipeline was primarily developed and tested on a remote OVH-BRUTE cluster with 755Gb of RAM and roughly 90 threads.
+It is recommended that you run it on a cluster of similar or greater strength.
+
+## Runtime
+
 Overall runtime is strongly influenced by the target organism’s genome size and complexity, but scales roughly linearly with input data volume.
 A representative mammalian assembly (*Stenella longirostris*, the spinner dolphin) at ~30x coverage was completed in roughly 66 hours.
 More detailed statistics are in the work for this.
+
+
+### Misc
+
+ effective in recovering roughly psuedochromosomal contigs given sufficient long-read data.
+We conventionally define this as >30x coverage.
 
 ![Sample output from `visualize_contig_lengths.R` module.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/modules/visualize_descending_contigs_sample_output.png?raw=true)
 Figure 2. Sample output from `visualize_contig_lengths.R` module. Each bar represents a contig, with red bars denoting contigs over 1 000 000 bp in length.

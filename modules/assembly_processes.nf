@@ -11,7 +11,7 @@
 process NANOPLOT {
     tag "Visualizing $trim_status reads: $sample_id"
     cpus 10
-    publishDir "results/reads/read_stats/${trim_status}/", mode: 'copy'
+    publishDir "${sample_id}_results/reads/read_stats/${trim_status}/", mode: 'copy'
     conda 'bioconda::nanoplot'
 
     input:
@@ -50,7 +50,7 @@ process NANOPLOT {
 process NANOFILT {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
-    publishDir "results/reads/${trim_status}_reads", mode: 'copy'
+    publishDir "${sample_id}_results/reads/${trim_status}", mode: 'copy'
     conda 'bioconda::nanofilt'
 
     input:
@@ -102,7 +102,6 @@ process FLYE {
 }
 process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper function for NEXTDENOVO itself.
     tag "Fetching params for NextDenovo assembly of $sample_id"
-    publishDir 'results'
 
     input:
     //tuple val(sample_id), val(assembler), path(fasta)
@@ -157,7 +156,7 @@ process NEXTDENOVO {
 
 process RACON {
     tag "Polishing primary assembly $sample_id ($assembler) with Racon"
-    publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
+    publishDir "${sample_id}_results/assemblies", mode: 'copy'
     conda 'bioconda::racon bioconda::minimap2'
     label 'parallel'
 
@@ -181,7 +180,7 @@ process RACON {
 
 process QUAST_MERGE {
     tag "Determining which $sample_id assembly is most contiguous (Quast)"
-    publishDir "results/primary_assemblies", mode: 'copy'
+    publishDir "${sample_id}_results/assemblies", mode: 'copy'
     conda 'bioconda::quast'
 
     input:
@@ -215,7 +214,7 @@ process QUAST_MERGE {
 
 process QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
-    publishDir "results/merged_assemblies", mode: 'copy'
+    publishDir "${sample_id}_results/assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
 
     input:
@@ -244,7 +243,7 @@ process QUICKMERGE {
 
 process P_DUPS {
     tag "Purging haplotypic duplicates from merged $sample_id assembly with purge_dups"
-    publishDir "results/merged_assemblies", mode: 'copy'
+    publishDir "${sample_id}_results/assemblies", mode: 'copy'
     conda 'bioconda::purge_dups'
 
     input:
