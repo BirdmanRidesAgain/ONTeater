@@ -121,7 +121,8 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
         genome_size = fasta.size()
     }
     */
-    Integer genome_size = genome_size
+    Float genome_size = genome_size
+    
     """
     # Use sed to edit the appropriate line
     cat $nextdenovo_conf | sed "s/XXg/${genome_size}g/" > nd_run_goodparams.cfg

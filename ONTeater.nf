@@ -18,6 +18,7 @@ log.info """\
     Input shortreads            : ${params.shortreads_raw}
     Input Flye assembly         : ${params.flye_asm}
     Input nextDenovo assembly   : ${params.nd_asm}
+    Input genome size           : ${params.genome_size}
     """
     .stripIndent()
 
