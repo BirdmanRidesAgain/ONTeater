@@ -159,8 +159,8 @@ workflow {
 
     if (DO_MERGE) {
         //merge and purge duplicate contigs  
-        best_asm_ch = QUAST_MERGE(polish_flye_ch, polish_nd_ch)
-        merge_ch = QUICKMERGE(polish_flye_ch, polish_nd_ch, best_asm_ch)
+        best_asm_ch = QUAST_MERGE(racon_flye_ch, racon_nd_ch)
+        merge_ch = QUICKMERGE(racon_flye_ch, racon_nd_ch, best_asm_ch)
     } else {
         //FIXME - make it so that you don't have to set 'flye_asm'; it can be any asm.
         merge_tup = new Tuple2 ("$sample_id", files(params.flye_asm))
