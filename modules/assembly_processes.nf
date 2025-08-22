@@ -50,7 +50,7 @@ process NANOPLOT {
 process NANOFILT {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
-    publishDir "${sample_id}_results/reads/${trim_status}", mode: 'copy'
+    publishDir "${sample_id}_results/reads", mode: 'copy'
     conda 'bioconda::nanofilt'
 
     input:

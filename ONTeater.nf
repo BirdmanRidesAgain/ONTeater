@@ -152,9 +152,9 @@ workflow {
     }
     else {
         flye_tup = new Tuple3 (sample_id, 'Flye', files(params.flye_asm))
-        polish_flye_ch = Channel.of(flye_tup)
+        racon_flye_ch = Channel.of(flye_tup)
         nd_tup = new Tuple3 ("$sample_id", 'nextDenovo', files(params.nd_asm))
-        polish_nd_ch = Channel.of(nd_tup)
+        racon_nd_ch = Channel.of(nd_tup)
         } 
 
     if (DO_MERGE) {
