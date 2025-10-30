@@ -10,6 +10,9 @@
 # Ignore NextFlow's 'work' and 'results' directories
 /work
 /results
+./plugins/* 
+
+
 
 # Ignore fasta_QC (auto-generated with operation, not needed for git purposes
 /fasta_QC

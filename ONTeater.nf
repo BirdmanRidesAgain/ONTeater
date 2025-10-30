@@ -57,8 +57,8 @@ workflow {
     trimreads_ch.view()
     pri_asm_flye_ch = FLYE(trimreads_ch)
         // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
-    pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    //nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
+    //pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
 
 
     // Create channel of reads and assembled fastas for Racon polishing
