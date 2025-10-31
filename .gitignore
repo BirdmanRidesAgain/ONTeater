@@ -5,7 +5,7 @@
 
 # Explicitly include the base directory's '.gitignore' as an exception - you want git to track that one
 !/.gitignore
-
+plugins/
 
 # Ignore NextFlow's 'work' and 'results' directories
 /work
