@@ -1,67 +1,91 @@
 # ONTeater
-A NextFlow-enabled pipeline used to assemble genomes with ONT-only input. Illumina or Illumina-like (eg, BGI) shortreads are supported.
+A [NextFlow](https://www.nextflow.io/docs/latest/index.html)-enabled pipeline intended to produce highly-contiguous genome assemblies with only ONT input.
+Illumina shortreads and PacBio longreads are optionally supported.
+It can also be accessed at [workflowhub.eu](https://workflowhub.eu/workflows/1736).
 
-## Notes specifically for Data Structures 2270:
-Genome assembly was, frankly, a bad idea to implement for a final exam. This is because:
-1. It requires some fun dependencies,
-2. I can't include any non-trivial test sets, and 
-3. Full runtime for most organisms takes 10-20 hours. 
+## Quickstart
 
-However, DAGs are ubiquitous in bioinformatics, and this pipeline fit that criterion extremely well.
+A genome assembly from ONT data can be run with the following command.
+Note that the user should supply a rough estimate of genome size and a valid [`BUSCO`](https://busco.ezlab.org) lineage.
+If genome size is not roughly known, we recommend using the [GoaT](https://goat.genomehubs.org) database to estimate from a related species.
+[`NextFlow`](https://www.nextflow.io) and [`conda`](https://anaconda.org/anaconda/conda) are dependencies and assumed to be accessible inside your system.
+```
+nextflow run ONTeater.nf --ONT_raw <input.fq.gz> --genome_size 1.1 --BUSCO_lineage <valid_BUSCO_lin> --trace --report <output_prefix>
+```
 
-To get around problems 2-3, I have supplied both a stub function for every process in this pipeline, and 'toy' datasets, in the toy_data subdirectory. They have realistic filenames and will be picked up by the parser if input as arguments (or in the same directory as `nextflow.nf`), but are completely empty. The stub functions then make liberal use of *touch* to create further empty files, letting logic of the DAG (Figure 1) work without any of the computation, also defanging `NextFlow`'s tendency to crash HPC clusters in the process. Along the same lines, I commented out the checks for `Conda` and `Docker` environments, removing those as dependencies.
+## Options
+All native options in `NextFlow` are usable in `ONTeater`.
+Notably, `--trace` and `--report` are useful.
+| Option | Default | Data type | Description |
+| -- | -- | -- | -- |
+| `--help`  | NA | Flag | Set to print a help message and exit. |
+| `--ONT_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--PB_raw`. |
+| `--PB_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--ONT_raw`. |
+| `--genome_size` | `1` | Float | A value representing genome size in gigabasepairs (g). The value does not need to be precise, and can be approximated to nearest 10th - eg, `3.2` for a human. |
+| `--workflow` | `run` | String | The workflow you would like to run; default is 'run' to perform all tasks. Valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'. |
+| `--flye_asm` | `null` | String | A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
+| `--nd_asm` | `null` | String | A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
 
-As discussed in QuickStart, this version of ONTeater can be run with:
+## High-level Description
+The `ONTeater` assembly pipeline takes ONT data as an input, optionally accepting PacBio and Illumina-like paired short reads as supplemental data sources.
+It begins with data visualization and trimming with `NanoPlot` and `Chopper` (v.0.7.0; Wouter de Coster and Rademakers 2023), both from the `NanoPack` series of programs.
+Low-quality reads (QUAL<10), reads under 500 base pairs in length, and ONT-specific adapters are all removed.
 
+Trimmed data then are run through two different assembly algorithms – `Flye` (v.2.9.6; Kolmogorov et al. 2019, Lin et al. 2016), an older repeat-graph based assembler, and `nextDenovo` (v.2.5.2; Jiang et al. 2024), a string-graph based assembler.
+These produce different graph walks (and hence, assemblies) throughout the same sets of reads, converging in areas of high complexity, but having variable performance around the graph ‘edges’.
+These two ‘primary assemblies’ are individually polished with `Racon` (v.1.5.0; Vaser et al. 2017), as well as `Pilon` (v.1.24; Walker et al. 2014), if Illumina-like shortreads are provided.
 
-`nextflow run ONTeater.nf -stub -with-dag --input_rawreads toy_data/*ONT*fq.gz --input_shortreads toy_data/*{1,2}.fq.gz`
+The two assemblies are then merged using `quickmerge` (v.0.3; Chakraborty et al. 2016), using the least contiguous (as measured by N50) assembly to patch gaps in the more contiguous.
 
+We then use `purge_dups` (v.1.2.6; Guan et al. 2020) to attempt to collapse the assembly to a single haplotype.
+Finally, a battery of QC tools, including but not limited to `QUAST` (v.5.2.0; Gurevich et al. 2013), `Compleasm` (v.0.2.6; Huang and Li 2023) and several in-home `Python` and `R` scripts compute summary statistics and produce figures of assembly contiguity.
+Results are then written to a final output directory (`${sequence_id}_results/`) for the end-user to consume.
 
-Unfortunately, this still requires `NextFlow` (a weird derivative of Apache Groovy) itself as a dependency, and I assume that you probably don't want to install it. Therefore, I will include a quick explanation of what, exactly, is going on here.
+### Outputs
 
-Genome assembly is a problem that involved performing complicated, highly sequential manipulations on one or more input data files until you reach the stopping point of a finished genome. This is both inefficient and error-prone to do as a human, with many, many points at which mistakes can creep in. At the same time, there are enough decision points that a linear pipeline fails to accurately assemble. So, because there are no cycles in the assembly process (we don't go from finished products to raw data), it's modeled extremely well by a directed acyclic graph (DAG).
+Important outputs are:
+| Description | Path |
+| -- | -- |
+| Raw read summary statistics | `${sample_id}_results/reads/read_stats/raw/` |
+| Trim read summary statistics | `${sample_id}_results/reads/read_stats/trim/` |
+| Trimmed reads |  `${sample_id}_results/reads` |
+| Polished assemblies |  `${sample_id}_results/assemblies"` |
+| Merged assembly |  `${sample_id}_results/assemblies"` |
+| Merged-purged assembly |  `${sample_id}_results/assemblies"` |
 
-In `NextFlow`, you define 'processes' and 'channels', where the processes correspond to graph nodes and the channels are links between the nodes. The program is built around the idea of asynchronous parallel processing, so each 'process' in the DAG can be visited only one time. 
+### Flowchart
 
-This creates substantial confusion in the DAG diagram itself - notice, for example, that several processes (NANOPLOT, RACON, PILON and QUAST) appear multiple times - for example, as 'NANOPLOT_RAW' and 'NANOPLOT_TRIM'. This makes no sense from a graphical perspective, but is a requirement in terms of `Nextflow`'s requirement for all process to be unique. Because, potentially, multiple datasets from different species can be run simultaneously (effectively multiplexing the 'channels'), ensuring that all nodes are visited only once ensures that data from different species do not collide.
-
-This requirement can be hacked around, but it's not intended. An example of this contributes to an error seen in this DAG (regarding the PILON processes), which will be discussed later.
-
-From a biological perspective, the interpretation of this graph is reasonably simple. Starting at the yellow box at the top, we read in our data, generating the first channels (Channel.fromList, Channel.fromFilePairs) - these represent our raw 'long-read' and 'short-read' data, respectively. The 'short-read' data is not necessarily present, and will be ignored if the channel is empty, resulting in a simpler graph.
-
-We then clean and visualize our the long-read data (NANOPLOT and CHOPPER) - NANOPLOT produces quality-control graphs that the end-user wants to see, so its channel/output goes directly to the yellow box at the bottom. CHOPPER simply trims the data and passes the channel to the a pair of assembly algorithms (FLYE and NEXTDENOVO), splitting the DAG.
-
-These assembly algorithms use further, much more complicated manipulations of de bruijin graphs in order to combine small (~10,000 base pairs) fragments of genomic information 'reads' to larger (~1,000,000 base pairs) ones 'contigs'. Because both implementations have somewhat different algorithms, we see differential performance between the two on data of different characteristics - FLYE works better on very repetitive data, and NEXTDENOVO performs better on shorter reads.
-
-The channels continue to be split while errors (sequencing errors, misassemblies, etc...) are corrected using polishing algorithms. RACON uses mapping data from the assemblies themselves to correct, and PILON activates *only* if short reads were read taken in. Both processes then feed out to the same channel - however, because PILON's activation is governed by an if statement, it seems to be displaying oddly in the visual representation. (Either that, or I've made an error, which is also very possible.)
-
-We then assess which draft assembly is higher quality and use that to guide a merge, patching breaks in the assembly (QUAST, QUICKMERGE). There's a final, post-processing step to remove suspected duplicate contigs.
-
-Further steps are in various levels of completeness, but all would fit into the same general 'expand onto the graph' framework.
-
-
-## Goals:
-This is a pipeline meant to automate parallel assembly of genomes from ONT longread data. The modules and processes involved are based off my Genome_assembly repository.
-
-## Installation:
-The pipeline includes three dependencies: [NextFlow](https://www.nextflow.io/docs/latest/getstarted.html), and [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). You will need to install all three of these for the pipeline to run. [Docker](https://docs.docker.com/engine/install/) and [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html) are not currently supported, but a `Docker` port is in the works.
-
-## Workflow:
-![DAG of ONTeater operation. Some functions are dry-run only at the moment.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/ONTeater_DAG.png?raw=true)
-Figure 1. DAG graph of the pipeline execution.
-
-![Sample output from 'visualize_contig_lengths.R' module.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/modules/visualize_descending_contigs_sample_output.png?raw=true)
-Figure 2. Sample output from `visualize_contig_lengths.R` module. Each bar represents a contig, with red bars denoting contigs over 1,000,000 bp in length. Green bars (not shown in this assembly) represent smaller ones, with the horizontal red line denoting the 1-million bp mark.
-
-## Quickstart:
-For a dry run with the included dummy data, the following code works:
-
-
-`nextflow run ONTeater.nf -stub -with-dag --input_rawreads toy_data/*ONT*fq.gz --input_shortreads toy_data/*{1,2}.fq.gz`
+<img title="a title" alt="Alt text" src="./ONTeater_flowchart.png" width=800>
 
 
-By default, ONTeater will look for your input data files in the directory in which ONTeater.nf is launched - therefore, if you have multiple unique datasets to analyze, you can also just store them in the working directory. If you do this, be aware that the files must conform to a uniform naming convention (\*ONT\*fq.gz for long reads and *{1,2}.fq.gz for short reads). Otherwise, it's possible for the parser to mix up short and longread data, or fail to recognize a data file. *It's generally safer to input them as parameters.*
+## Known limitations
 
-The pipeline was written with ONT data in mind, but will process PacBio data as well. PacBio data must be submitted directly as an argument to --input_rawreads, as the parser will not directly recognize them.
+## Installation and requirements
+
+### Installation
+
+The pipeline includes two dependencies: [NextFlow](https://www.nextflow.io/docs/latest/getstarted.html), and [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+You will need to install all three of these for the pipeline to run.
+[Docker](https://docs.docker.com/engine/install/) and [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html) are not currently supported, but a `Docker` port is in the works.
+
+### Requirements
+
+The ONTeater pipeline is computationally heavy, but does not require GPU support to function.
+The pipeline was primarily developed and tested on a remote OVH-BRUTE cluster with 755Gb of RAM and roughly 90 threads.
+It is recommended that you run it on a cluster of similar or greater strength.
+
+## Runtime
+
+Overall runtime is strongly influenced by the target organism’s genome size and complexity, but scales roughly linearly with input data volume.
+A representative mammalian assembly (*Stenella longirostris*, the spinner dolphin) at ~30x coverage was completed in roughly 66 hours.
+More detailed statistics are in the work for this.
 
 
+### Misc
+
+ effective in recovering roughly psuedochromosomal contigs given sufficient long-read data.
+We conventionally define this as >30x coverage.
+
+![Sample output from `visualize_contig_lengths.R` module.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/modules/visualize_descending_contigs_sample_output.png?raw=true)
+Figure 2. Sample output from `visualize_contig_lengths.R` module. Each bar represents a contig, with red bars denoting contigs over 1 000 000 bp in length.
+Green bars (not shown in this assembly) represent smaller ones, with the horizontal red line denoting the 1-million bp mark.
