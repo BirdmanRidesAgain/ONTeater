@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from argparse import ArgumentParser
+import subprocess
+
+def main():
+    ### DEFINE AND CHECK ARGS
+    parser = ArgumentParser(description="Assembles raw reads.")
+    parser.add_argument('-o','--ONT_rds', type=str, required=True)
+    parser.add_argument('-gs','--genome_size', type=str, required=True)
+    parser.add_argument('-b','--BUSCO_lineage', type=str, required=True)
+    parser.add_argument('-t','--threads', type=int)
+    parser.add_argument('-pro','--profile', type=str)
+    parser.add_argument('-wt','--with_trace', type=str)
+    parser.add_argument('-wr','--with_report', type=str)
+    parser.add_argument('-pre','--prefix', type=str, default='out')
+    args = parser.parse_args()
+
+
+    nf_variables = ['profile', 'with_trace', 'with_report']
+    # Build a single command string from all provided arguments
+    command_items = ['./main.nf']
+    for name, value in vars(args).items():
+        if value is None:
+            continue
+        # nextflow variables need single quotes
+        if str(name) in nf_variables:
+            command_items.append(f'-{name}')
+            command_items.append(str(value))
+            continue
+        command_items.append(f"--{name}")
+        command_items.append(str(value))
+    command = " ".join(command_items)
+    # Run the pipeline
+    subprocess.run(command.split())
+
+# If this is being imported
+if __name__=="__main__":
+    main()

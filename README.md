@@ -55,7 +55,11 @@ Important outputs are:
 
 ### Flowchart
 
+<<<<<<< HEAD
 <img title="a title" alt="Alt text" src="./ONTeater_flowchart.png" width=800>
+=======
+<img title="a title" alt="Alt text" src="./images/ONTeater_flowchart.png" width=800>
+>>>>>>> frontend
 
 
 ## Known limitations
