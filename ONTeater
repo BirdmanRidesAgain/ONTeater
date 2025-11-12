@@ -7,7 +7,9 @@ import subprocess
 def main():
     ### DEFINE AND CHECK ARGS
     parser = ArgumentParser(description="Assembles raw reads.")
-    parser.add_argument('-v','--reads', type=str, required=True)
+    parser.add_argument('-o','--ONT_rds', type=str, required=True)
+    parser.add_argument('-gs','--genome_size', type=str, required=True)
+    parser.add_argument('-b','--BUSCO_lineage', type=str, required=True)
     parser.add_argument('-t','--threads', type=int)
     parser.add_argument('-pro','--profile', type=str)
     parser.add_argument('-wt','--with_trace', type=str)
@@ -18,7 +20,7 @@ def main():
 
     nf_variables = ['profile', 'with_trace', 'with_report']
     # Build a single command string from all provided arguments
-    command_items = ['./main.nf']
+    command_items = ['nextflow run ./main.nf']
     for name, value in vars(args).items():
         if value is None:
             continue

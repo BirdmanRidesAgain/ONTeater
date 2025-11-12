@@ -35,13 +35,15 @@ def get_name_file_pair(paths) {
     return combined_list
 }
 
-//include { REMOVE_CONTAMINANTS } from './modules/processes.nf' //initial filtering for contaminants
-include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM } from './modules/processes.nf' //nanoplot-related
-include { NANOFILT; FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO} from './modules/processes.nf' //primary assemblers
+//include { REMOVE_CONTAMINANTS } from './modules/remove_contaminants_kraken2/main.nf' //initial filtering for contaminants
+include { VISUALIZE_READS_NANOPLOT as NANOPLOT_RAW; VISUALIZE_READS_NANOPLOT as NANOPLOT_TRIM } from './modules/visualize_reads_nanoplot/main.nf' //nanoplot-related
+include { TRIM_READS_CHOPPER } from './modules/trim_reads_chopper/main.nf' //trimming
+include { ASSEMBLE_FLYE } from './modules/assemble_flye/main.nf' //primary assemblers
+include { GET_NEXTDENOVO_PARAMS } from './modules/get_nextdenovo_params/main.nf'
+include { ASSEMBLE_NEXTDENOVO } from './modules/assemble_nextdenovo/main.nf'
 include { //polishing-related
-    RACON as RACON_FLYE; RACON as RACON_ND; 
-    } from './modules/processes.nf'
-//include { QUICKMERGE; P_DUPS } from './modules/processes.nf' //merged assembly-related
+    POLISH_RACON as RACON_FLYE; POLISH_RACON as RACON_ND; 
+    } from './modules/polish_racon/main.nf'
 
 
 workflow {
@@ -49,16 +51,16 @@ workflow {
 
     // Trim and visualize raw longread data
     NANOPLOT_RAW(rawreads_ch)
-    trimreads_ch = NANOFILT(rawreads_ch) //trim
+    trimreads_ch = TRIM_READS_CHOPPER(rawreads_ch) //trim
     trimreads_ch.view()
     NANOPLOT_TRIM(trimreads_ch)
     
     // Begin primary assembly
     trimreads_ch.view()
-    pri_asm_flye_ch = FLYE(trimreads_ch)
+    pri_asm_flye_ch = ASSEMBLE_FLYE(trimreads_ch)
         // Adds genome size estimate and core availability info to improve nextDenovo polishing
     nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
-    pri_asm_nd_ch = NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    pri_asm_nd_ch = ASSEMBLE_NEXTDENOVO(trimreads_ch, nd_conf_ch)
 
 
     // Create channel of reads and assembled fastas for Racon polishing
@@ -70,8 +72,8 @@ workflow {
     //racon_nd_ch = RACON_ND(polish_nd_ch)
     
     //merge and purge duplicate contigs
-    //merged_ch = QUICKMERGE(quast_flye_ch, quast_nd_ch)
-    //merged_purged_ch = P_DUPS(merged_ch) //replace p_dups call(s) with wrapper script.
+    //merged_ch = MERGE_ASSEMBLIES_QUICKMERGE(quast_flye_ch, quast_nd_ch)
+    //merged_purged_ch = PURGE_HAPLOTYPIC_DUPLICATES(merged_ch) //replace p_dups call(s) with wrapper script.
     
     // QC AND VISUALIZE ASSEMBLED GENOME:
         /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
