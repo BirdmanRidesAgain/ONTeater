@@ -1,4 +1,4 @@
-process FLYE {
+process ASSEMBLE_FLYE {
     tag "Primary assembly of $sample_id with Flye"
     conda 'bioconda::flye'
     label 'parallel'

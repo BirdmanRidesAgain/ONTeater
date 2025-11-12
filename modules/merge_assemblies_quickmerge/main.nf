@@ -1,4 +1,4 @@
-process QUICKMERGE {
+process MERGE_ASSEMBLIES_QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
     publishDir "results/merged_assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
@@ -10,20 +10,37 @@ process QUICKMERGE {
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
 
-    stub:
+    script:
     sample_id = sample_id_1 //they're all the same sample_id, ffs
+    assembler = (n50_1 > n50_2) ? assembler_1 : assembler_2
+    
     if (n50_1 > n50_2) {
         println("$assembler_1 assembly more contiguous. Merging $fasta_2 into $fasta_1")
-        assembler = assembler_1
         """
         touch "${sample_id}_${assembler}_major_merged.fa"
         """
     }
     else { //it's very unlikely that we'll have a tie.
         println("$assembler_2 assembly more contiguous. Merging $fasta_1 into $fasta_2")
-        assembler = assembler_2
         """
         touch "${sample_id}_${assembler}_major_merged.fa"
         """ 
-        }
     }
+    
+    stub:
+    sample_id = sample_id_1 //they're all the same sample_id, ffs
+    assembler = (n50_1 > n50_2) ? assembler_1 : assembler_2
+    
+    if (n50_1 > n50_2) {
+        println("$assembler_1 assembly more contiguous. Merging $fasta_2 into $fasta_1")
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """
+    }
+    else { //it's very unlikely that we'll have a tie.
+        println("$assembler_2 assembly more contiguous. Merging $fasta_1 into $fasta_2")
+        """
+        touch "${sample_id}_${assembler}_major_merged.fa"
+        """ 
+    }
+}

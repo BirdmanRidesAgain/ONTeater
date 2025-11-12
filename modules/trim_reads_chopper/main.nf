@@ -1,4 +1,4 @@
-process NANOFILT {
+process TRIM_READS_CHOPPER {
     tag "Trimming and filtering raw reads: $sample_id"
     cpus 10
     publishDir "results/reads/${trim_status}_reads", mode: 'copy'

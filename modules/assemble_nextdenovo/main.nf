@@ -1,11 +1,11 @@
-process NEXTDENOVO {
+process ASSEMBLE_NEXTDENOVO {
     tag "Primary assembly of $sample_id with $assembler"
     conda 'bioconda::nextdenovo'
     label 'parallel'
 
     input:
     tuple val(sample_id), val(trim_status), path(reads)
-    path "nextdenovo_conf"
+    path nextdenovo_conf
 
     output:
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}.fa")

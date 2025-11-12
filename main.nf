@@ -1,20 +1,23 @@
+#!/usr/bin/env nextflow
+
+nextflow.enable.dsl = 2
 /*
  * Keiler Collier
  * ONTeater V1 - used to run genome assembly from concatenated, Kraken-filtered readfiles.
  *
  * Started: 21 Feb 2024
- * Last update: 12 Dec 2024
- * Pipeline input params supplied from nextflow.config
- * Invocation is nextflow run ONTeater.nf -stub -with-report -with-dag ONTeater.html
+ * Last update: 12 Nov 2025
  */
 
 log.info """\
     O N T E A T E R - N F   P I P E L I N E
     ===================================
     Project directory       : $projectDir
-    Input ONT longreads     : ${params.input_ONTreads}
-    Input PacBio longreads  : ${params.input_PBreads}
-    Input shortreads        : ${params.input_shortreads}
+    Input ONT longreads     : ${params.ONT_rds}
+    Input PacBio longreads  : ${params.PB_rds}
+    Input shortreads        : ${params.short_rds}
+    Genome size             : ${params.genome_size}
+    BUSCO lineage           : ${params.BUSCO_lineage}
     """
     .stripIndent()
 
@@ -36,6 +39,8 @@ def get_name_file_pair(paths) {
 }
 
 //include { REMOVE_CONTAMINANTS } from './modules/remove_contaminants_kraken2/main.nf' //initial filtering for contaminants
+// Import modules
+include { PRINT_HELP } from './modules/print_help'
 include { VISUALIZE_READS_NANOPLOT as NANOPLOT_RAW; VISUALIZE_READS_NANOPLOT as NANOPLOT_TRIM } from './modules/visualize_reads_nanoplot/main.nf' //nanoplot-related
 include { TRIM_READS_CHOPPER } from './modules/trim_reads_chopper/main.nf' //trimming
 include { ASSEMBLE_FLYE } from './modules/assemble_flye/main.nf' //primary assemblers
@@ -47,7 +52,14 @@ include { //polishing-related
 
 
 workflow {
-    rawreads_ch = Channel.fromList(get_name_file_pair(params.input_ONTreads))
+    main:
+
+    if (params.help) {
+        PRINT_HELP()
+        exit 10
+    }
+
+    rawreads_ch = Channel.fromList(get_name_file_pair(params.ONT_rds))
 
     // Trim and visualize raw longread data
     NANOPLOT_RAW(rawreads_ch)
@@ -57,18 +69,18 @@ workflow {
     
     // Begin primary assembly
     trimreads_ch.view()
-    pri_asm_flye_ch = ASSEMBLE_FLYE(trimreads_ch)
+    //pri_asm_flye_ch = ASSEMBLE_FLYE(trimreads_ch)
         // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
-    pri_asm_nd_ch = ASSEMBLE_NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    //nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
+    //pri_asm_nd_ch = ASSEMBLE_NEXTDENOVO(trimreads_ch, nd_conf_ch)
 
 
     // Create channel of reads and assembled fastas for Racon polishing
-    polish_flye_ch = pri_asm_flye_ch.join(trimreads_ch)
+    //polish_flye_ch = pri_asm_flye_ch.join(trimreads_ch)
     //polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
     
     // Polish and merge genomes
-    racon_flye_ch = RACON_FLYE(polish_flye_ch)
+    //racon_flye_ch = RACON_FLYE(polish_flye_ch)
     //racon_nd_ch = RACON_ND(polish_nd_ch)
     
     //merge and purge duplicate contigs
@@ -83,4 +95,11 @@ workflow {
          all called from ./modules/helper_scripts
          outputs .pdfs of relevant stats
          */
+    
+//    publish:
+//    final = Channel.("Hello World")
 }
+
+//output {
+//    final {}
+//}

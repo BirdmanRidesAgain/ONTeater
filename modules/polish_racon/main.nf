@@ -1,4 +1,4 @@
-process RACON {
+process POLISH_RACON {
     tag "Polishing primary assembly $sample_id ($assembler) with Racon"
     publishDir "results/primary_assemblies/${assembler}", mode: 'copy'
     conda 'bioconda::racon bioconda::minimap2'

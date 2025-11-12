@@ -1,4 +1,4 @@
-process NANOPLOT {
+process VISUALIZE_READS_NANOPLOT {
     tag "Visualizing $trim_status reads: $sample_id"
     cpus 10
     publishDir "results/reads/read_stats/${trim_status}/", mode: 'copy'

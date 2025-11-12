@@ -20,7 +20,7 @@ def main():
 
     nf_variables = ['profile', 'with_trace', 'with_report']
     # Build a single command string from all provided arguments
-    command_items = ['nextflow run ./main.nf']
+    command_items = ['./main.nf']
     for name, value in vars(args).items():
         if value is None:
             continue
