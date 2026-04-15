@@ -7,10 +7,12 @@
 !/.gitignore
 plugins/
 
-# Ignore NextFlow's 'work' and 'results' directories
+# Ignore NextFlow's working directories
 /work
 /results
-./plugins/* 
+plugins/* 
+conda_cache/
+tmp/
 
 
 

@@ -12,13 +12,10 @@ process GET_NEXTDENOVO_PARAMS { // this can also be implemented as a helper func
     path "run.cfg"
 
     script:
-    // Get genome size from the Flye assembly if not defined in params
-    Integer genome_size = params.genome_size
-    if (params.genome_size == null) {
-        genome_size = fasta.size()
-    }
+    // Prefer explicit genome size (e.g. 5m, 1.2g). If absent, estimate from Flye assembly size.
+    String genome_size = params.genome_size ? params.genome_size.toString() : String.format('%.3fg', fasta.size() / 1e9)
     """
-    # Use sed to edit the appropriate line
-    cat $nextdenovo_conf | sed "s/XXg/${genome_size}g/" > run.cfg
+    # Replace the template token with concrete genome size.
+    sed "s/__GENOME_SIZE__/${genome_size}/" $nextdenovo_conf > run.cfg
     """
 }

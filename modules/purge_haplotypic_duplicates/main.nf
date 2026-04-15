@@ -1,7 +1,6 @@
 process PURGE_HAPLOTYPIC_DUPLICATES {
     tag "Purging haplotypic duplicates from merged $sample_id assembly with Purge_dups"
     publishDir "results/merged_assemblies", mode: 'copy'
-    conda 'bioconda::purge_dups'
 
     input:
     tuple val(sample_id), val(assembler), path(fasta)

@@ -1,4 +1,5 @@
 # ONTeater
+
 A [NextFlow](https://www.nextflow.io/docs/latest/index.html)-enabled pipeline intended to produce highly-contiguous genome assemblies with only ONT input.
 Illumina shortreads and PacBio longreads are optionally supported.
 It can also be accessed at [workflowhub.eu](https://workflowhub.eu/workflows/1736).
@@ -9,24 +10,31 @@ A genome assembly from ONT data can be run with the following command.
 Note that the user should supply a rough estimate of genome size and a valid [`BUSCO`](https://busco.ezlab.org) lineage.
 If genome size is not roughly known, we recommend using the [GoaT](https://goat.genomehubs.org) database to estimate from a related species.
 [`NextFlow`](https://www.nextflow.io) and [`conda`](https://anaconda.org/anaconda/conda) are dependencies and assumed to be accessible inside your system.
+
+```bash
+nextflow run main.nf --ONT_rds <input.fq.gz> --genome_size 1.1 --BUSCO_lineage <valid_BUSCO_lin> --prefix <output_prefix>
 ```
-nextflow run ONTeater.nf --ONT_raw <input.fq.gz> --genome_size 1.1 --BUSCO_lineage <valid_BUSCO_lin> --trace --report <output_prefix>
-```
+
+`--workflow run` is the default and currently executes preprocessing plus primary assembly.
 
 ## Options
+
 All native options in `NextFlow` are usable in `ONTeater`.
 Notably, `--trace` and `--report` are useful.
-| Option | Default | Data type | Description |
-| -- | -- | -- | -- |
-| `--help`  | NA | Flag | Set to print a help message and exit. |
-| `--ONT_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--PB_raw`. |
-| `--PB_raw` | `null` | String | A path to a gzipped file of ONT reads used for assembly. Can be used alongside `--ONT_raw`. |
-| `--genome_size` | `1` | Float | A value representing genome size in gigabasepairs (g). The value does not need to be precise, and can be approximated to nearest 10th - eg, `3.2` for a human. |
-| `--workflow` | `run` | String | The workflow you would like to run; default is 'run' to perform all tasks. Valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'. |
-| `--flye_asm` | `null` | String | A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
-| `--nd_asm` | `null` | String | A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow. |
+
+|Option|Default|Data type|Description|
+|---|---|---|---|
+|`--help`|NA|Flag|Set to print a help message and exit.|
+|`--ONT_rds`|`null`|String|A path to a gzipped file of ONT reads used for assembly. Preferred input flag.|
+|`--ONT_raw`|`null`|String|Backward-compatible alias for `--ONT_rds`.|
+|`--genome_size`|`1`|Float|A value representing genome size in gigabasepairs (g). The value does not need to be precise, and can be approximated to nearest 10th - eg, `3`, or `3.2` for a human.|
+|`--workflow`|`run`|String|Entry point for development/testing. Wired modes: `run`, `trim`, `assemble`, `postprocess`, `qc`.|
+|`--flye_asm`|`null`|String|A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
+|`--nd_asm`|`null`|String|A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
+|`--final_asm`|`null`|String|Path to a final assembly FASTA used when running `--workflow qc` directly.|
 
 ## High-level Description
+
 The `ONTeater` assembly pipeline takes ONT data as an input, optionally accepting PacBio and Illumina-like paired short reads as supplemental data sources.
 It begins with data visualization and trimming with `NanoPlot` and `Chopper` (v.0.7.0; Wouter de Coster and Rademakers 2023), both from the `NanoPack` series of programs.
 Low-quality reads (QUAL<10), reads under 500 base pairs in length, and ONT-specific adapters are all removed.
@@ -44,23 +52,80 @@ Results are then written to a final output directory (`${sequence_id}_results/`)
 ### Outputs
 
 Important outputs are:
-| Description | Path |
-| -- | -- |
-| Raw read summary statistics | `${sample_id}_results/reads/read_stats/raw/` |
-| Trim read summary statistics | `${sample_id}_results/reads/read_stats/trim/` |
-| Trimmed reads |  `${sample_id}_results/reads` |
-| Polished assemblies |  `${sample_id}_results/assemblies"` |
-| Merged assembly |  `${sample_id}_results/assemblies"` |
-| Merged-purged assembly |  `${sample_id}_results/assemblies"` |
+
+#### Preprocess (`workflow trim` and `workflow run`)
+
+With `--prefix <prefix>`, preprocess artifacts are copied under `results/<prefix>/reads/`:
+
+|Description|Path|
+|---|---|
+|Raw read NanoPlot report and plots|`results/<prefix>/reads/*_raw_NanoPlot/`|
+|Filtered-read NanoPlot (after trim/filter)|`results/<prefix>/reads/*_trim_filtered_NanoPlot/`|
+|Trimmed / filtered FASTQ|`results/<prefix>/reads/*_trim.fq.gz`|
+
+#### Full pipeline (current `workflow run` target layout)
+
+|Description|Path|
+|---|---|
+|Raw read summary statistics|`${sample_id}_results/reads/read_stats/raw/`|
+|Trim read summary statistics|`${sample_id}_results/reads/read_stats/trim/`|
+|Trimmed reads|`${sample_id}_results/reads`|
+|Polished assemblies|`${sample_id}_results/assemblies`|
+|Merged assembly|`${sample_id}_results/assemblies`|
+|Merged-purged assembly|`${sample_id}_results/assemblies`|
+
+#### Primary assembly outputs (`workflow assemble` and `workflow run`)
+
+Polished assembly files are published by the `POLISH_RACON` module under:
+
+- `results/primary_assemblies/Flye/`
+- `results/primary_assemblies/nextDenovo/`
+
+Top-level workflow outputs are grouped under `results/<prefix>/assemblies/`.
+
+#### Postprocess and QC (`workflow postprocess`, `workflow qc`, and `workflow run`)
+
+- `workflow postprocess` expects:
+  - `--flye_asm <flye_racon.fa>`
+  - `--nd_asm <nextdenovo_racon.fa>`
+- `workflow qc` expects:
+  - `--final_asm <final_assembly.fa>`
+
+Outputs are currently published to:
+
+- `results/merged_assemblies/` (merge + purged placeholders)
+- `results/QC/` (QUAST + Compleasm reports)
+
+### QC stub profile
+
+For fast wiring/tests without QUAST/Compleasm runtime dependencies, use the `qc_stub` profile:
+
+```bash
+nextflow run main.nf --workflow qc --final_asm <final_assembly.fa> -profile qc_stub
+```
+
+This writes lightweight stub reports for `QC_QUAST` and `QC_COMPLEASM`.
+
+## Smoke test
+
+Use the bundled smoke test script for quick user-perspective validation:
+
+```bash
+./scripts/smoke_test.sh
+```
+
+By default, it runs `--workflow trim` for both direct Nextflow and wrapper entry paths, then validates expected preprocess outputs.
+
+Useful overrides:
+
+- `WORKFLOW_MODE=run ./scripts/smoke_test.sh` to exercise preprocessing + primary assembly wiring.
+- `RUN_FULL=1 ./scripts/smoke_test.sh` to additionally launch a separate full `workflow run` check.
+- `WORKFLOW_MODE=postprocess FLYE_ASM=<flye.fa> ND_ASM=<nd.fa> ./scripts/smoke_test.sh`
+- `WORKFLOW_MODE=qc FINAL_ASM=<final.fa> ./scripts/smoke_test.sh`
 
 ### Flowchart
 
-<<<<<<< HEAD
-<img title="a title" alt="Alt text" src="./ONTeater_flowchart.png" width=800>
-=======
-<img title="a title" alt="Alt text" src="./images/ONTeater_flowchart.png" width=800>
->>>>>>> frontend
-
+![ONTeater pipeline flowchart](./ONTeater_flowchart.png)
 
 ## Known limitations
 
@@ -84,10 +149,9 @@ Overall runtime is strongly influenced by the target organism’s genome size an
 A representative mammalian assembly (*Stenella longirostris*, the spinner dolphin) at ~30x coverage was completed in roughly 66 hours.
 More detailed statistics are in the work for this.
 
-
 ### Misc
 
- effective in recovering roughly psuedochromosomal contigs given sufficient long-read data.
+Effective in recovering roughly pseudochromosomal contigs given sufficient long-read data.
 We conventionally define this as >30x coverage.
 
 ![Sample output from `visualize_contig_lengths.R` module.](https://github.com/BirdmanRidesAgain/ONTeater/blob/main/modules/visualize_descending_contigs_sample_output.png?raw=true)

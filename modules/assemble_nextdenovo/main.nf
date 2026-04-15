@@ -1,6 +1,8 @@
 process ASSEMBLE_NEXTDENOVO {
     tag "Primary assembly of $sample_id with $assembler"
-    conda 'bioconda::nextdenovo'
+    // nextDenovo currently breaks under Python 3.13 on this platform.
+    // Pin Python to a known-compatible runtime for stable seed_cns execution.
+    conda 'bioconda::nextdenovo=2.5.2 conda-forge::python=3.10'
     label 'parallel'
 
     input:

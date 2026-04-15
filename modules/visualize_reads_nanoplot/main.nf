@@ -1,38 +1,31 @@
 process VISUALIZE_READS_NANOPLOT {
-    tag "Visualizing $trim_status reads: $sample_id"
-    cpus 10
-    publishDir "results/reads/read_stats/${trim_status}/", mode: 'copy'
-    conda 'bioconda::nanoplot'
+    tag "Visualizing $trim_status reads: ${reads.simpleName}"
 
     input:
-    tuple val(sample_id), val(trim_status), path(reads)
+    path reads
+    val trim_status
 
     output:
-    path "${sample_id}_${trim_status}_NanoPlot"
+    path "${reads.simpleName}_${trim_status}_NanoPlot", emit: viz
 
     script:
-    sample_id = sample_id
-    trim_status = trim_status
 
-    """
-    echo "Running NanoPlot on $trim_status reads: $sample_id"
-    echo "$task.cpus allocated"
-    """
     if (trim_status == 'raw') {
+        color = 'limegreen'
+    } else { color = 'royalblue' }
         """
-        NanoPlot -t $task.cpus --huge \
-        --tsv_stats --drop_outliers --loglength --color limegreen \
-        -p ${sample_id}_${trim_status}_ --title ${sample_id}_${trim_status} \
-        --outdir ${sample_id}_${trim_status}_NanoPlot \
+        NANO_PLOT="\${CONDA_PREFIX:+\${CONDA_PREFIX}/bin/}NanoPlot"
+        if [ ! -x "\$NANO_PLOT" ]; then
+            NANO_PLOT=\$(command -v NanoPlot || true)
+        fi
+        if [ -z "\$NANO_PLOT" ]; then
+            echo "ERROR: NanoPlot not found in PATH/conda env." >&2
+            exit 1
+        fi
+        \$NANO_PLOT -t $task.cpus --huge \
+        --tsv_stats --drop_outliers --loglength --color ${color} \
+        -p ${reads.simpleName}_${trim_status} --title ${reads.simpleName}_${trim_status} \
+        --outdir ${reads.simpleName}_${trim_status}_NanoPlot \
         --fastq $reads
         """
-    } else {
-        """
-        NanoPlot -t $task.cpus --huge \
-        --tsv_stats --drop_outliers --loglength --color royalblue \
-        -p ${sample_id}_${trim_status}_ --title ${sample_id}_${trim_status} \
-        --outdir ${sample_id}_${trim_status}_NanoPlot \
-        --fastq $reads
-        """ 
     }
-}

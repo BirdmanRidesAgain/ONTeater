@@ -9,135 +9,150 @@ nextflow.enable.dsl = 2
  * Last update: 12 Nov 2025
  */
 
-log.info """\
-    O N T E A T E R - N F   P I P E L I N E
-    ===================================
-    Project directory       : $projectDir
-    Input ONT longreads     : ${params.ONT_rds}
-    Input PacBio longreads  : ${params.PB_rds}
-    Input shortreads        : ${params.short_rds}
-    Genome size             : ${params.genome_size}
-    BUSCO lineage           : ${params.BUSCO_lineage}
-    """
-    .stripIndent()
 
-def get_name_file_pair(paths) {
-    // function to parse fasta paths and return labels for them as a tuple
-    path_list = files(paths) // creates list of filepaths
-    int num_files = path_list.size
-
-    def name_list = [] // creates empty list for the filenames
-    path_list.each { name_list.add(it.getSimpleName()) } // adds each filename to a new list
-
-    //now, we combine the lists with a for loop:
-    def combined_list = []
-    for (int i in 0..(num_files - 1)) {
-        def file_tuple = new Tuple3(name_list[i], 'raw', path_list[i])
-        combined_list.add(file_tuple)
-    }
-    return combined_list
-}
-
-def get_sample_id(String path) {
-    //Helper function to provide a channel of sample names. Avoids tuple issues when only running parts of pipeline.
-    def infile = file(path)
-    return infile.getSimpleName()
-}
 //include { REMOVE_CONTAMINANTS } from './modules/remove_contaminants_kraken2/main.nf' //initial filtering for contaminants
 // Import modules
-include { PRINT_HELP } from './modules/print_help'
-include { VISUALIZE_READS_NANOPLOT as NANOPLOT_RAW; VISUALIZE_READS_NANOPLOT as NANOPLOT_TRIM } from './modules/visualize_reads_nanoplot/main.nf' //nanoplot-related
-include { TRIM_READS_CHOPPER } from './modules/trim_reads_chopper/main.nf' //trimming
-include { ASSEMBLE_FLYE } from './modules/assemble_flye/main.nf' //primary assemblers
-include { GET_NEXTDENOVO_PARAMS } from './modules/get_nextdenovo_params/main.nf'
-include { ASSEMBLE_NEXTDENOVO } from './modules/assemble_nextdenovo/main.nf'
-include { //polishing-related
-    POLISH_RACON as RACON_FLYE; POLISH_RACON as RACON_ND; 
-    } from './modules/polish_racon/main.nf'
-
-def print_help() {
-    //Prints out ONTeater instructions.
-    log.info"""
-    Basic Usage:
-    nextflow run ONTeater.nf [--ONT_raw OR --PB_raw]
-    
-    Options:
-        --help          Flag. Show this help message and exit
-        --ONT_raw       String; default null. A gzipped file of ONT reads used for assembly. Can be used with --PB_raw.
-        --PB_raw        String; default null. A gzipped file of PacBio reads used for assembly. Can be used with --ONT_raw.
-        --genome_size   Float; default 1.0. Genome size in GB
-        --BUSCO_lineage String; default null (ie, compleasm auto-lineage). See https://busco.ezlab.org/list_of_lineages.html for acceptable list
-        --workflow      String; default 'run'. Determines start point of workflow; valid options are: 'run', 'trim', 'assemble', 'merge', 'pdups', 'qc'
-        --flye_asm      String; default null. Used in 'merge', 'pdups' and 'qc' workflows.
-        --nd_asm        String; default null. Used in 'merge', 'pdups' and 'qc' workflows.
-        --trace         Flag. Nextflow-native; produces a trace of the run.
-        --report        String. Nextflow-native; produces a runtime report with the supplied name.
-
-    Notes:
-        The only mandatory option is either --ONT_raw or --PB_raw. The assembler also accepts both at the same time.
-        Any errors (of which there are probably many) should be reported to https://github.com/BirdmanRidesAgain.
-    
-        The 'workflow' parameter is likely to be particularly buggy- this was a feature implemented for testing purposes.
-    """.stripIndent()
-}
-
-//include { REMOVE_CONTAMINANTS } from './modules/processes.nf' //initial filtering for contaminants
-include { NANOPLOT as NANOPLOT_RAW; NANOPLOT as NANOPLOT_TRIM; NANOFILT;  //nanoplot-related
-    FLYE; GET_NEXTDENOVO_PARAMS; NEXTDENOVO;  //primary assemblers
-    RACON as RACON_FLYE; RACON as RACON_ND;  //polishing-related
-    QUAST_MERGE; QUICKMERGE; P_DUPS;  //merged assembly-related
-} from './modules/assembly_processes.nf'
-include { QC_QUAST; QC_COMPLEASM } from './modules/qc_processes.nf' //merged assembly-related
+include { PRINT_HELP } from './modules/print_help/main.nf'
+include { PREPROCESS_DATA } from './modules/preprocess_reads.nf'
+include { PRIMARY_ASSEMBLY } from './modules/primary_assembly.nf'
+include { POSTPROCESS_ASSEMBLY } from './modules/postprocess_assembly.nf'
+include { QC_WORKFLOW } from './modules/qc_workflow.nf'
+//include { ASSEMBLE_FLYE } from './modules/assemble_flye/main.nf' //primary assemblers
+//include { GET_NEXTDENOVO_PARAMS } from './modules/get_nextdenovo_params/main.nf'
+//include { ASSEMBLE_NEXTDENOVO } from './modules/assemble_nextdenovo/main.nf'
+//include { //polishing-related
+//    POLISH_RACON as RACON_FLYE; POLISH_RACON as RACON_ND; 
+//    } from './modules/polish_racon/main.nf'
 
 workflow {
     main:
+    def ont_reads = params.ONT_rds ?: params.ONT_raw
+    def workflow_mode = params.workflow ?: 'run'
+    def valid_modes = ['run', 'trim', 'assemble', 'postprocess', 'qc']
 
     if (params.help) {
         PRINT_HELP()
         exit 10
     }
 
-    rawreads_ch = Channel.fromList(get_name_file_pair(params.ONT_rds))
+    if (!valid_modes.contains(workflow_mode)) {
+        error "Unsupported --workflow '${workflow_mode}'. Valid options: ${valid_modes.join(', ')}"
+    }
 
-    // Trim and visualize raw longread data
-    NANOPLOT_RAW(rawreads_ch)
-    trimreads_ch = TRIM_READS_CHOPPER(rawreads_ch) //trim
-    trimreads_ch.view()
-    NANOPLOT_TRIM(trimreads_ch)
-    
-    // Begin primary assembly
-    trimreads_ch.view()
-    //pri_asm_flye_ch = ASSEMBLE_FLYE(trimreads_ch)
-        // Adds genome size estimate and core availability info to improve nextDenovo polishing
-    //nd_conf_ch = GET_NEXTDENOVO_PARAMS(pri_asm_flye_ch, params.nextdenovo_conf)
-    //pri_asm_nd_ch = ASSEMBLE_NEXTDENOVO(trimreads_ch, nd_conf_ch)
+    if (['run', 'trim', 'assemble'].contains(workflow_mode) && !ont_reads) {
+        error "No ONT reads provided. Use --ONT_rds (preferred) or --ONT_raw."
+    }
+    if (workflow_mode == 'postprocess' && (!params.flye_asm || !params.nd_asm)) {
+        error "Workflow mode 'postprocess' requires --flye_asm and --nd_asm."
+    }
+    if (workflow_mode == 'qc' && !params.final_asm) {
+        error "Workflow mode 'qc' requires --final_asm."
+    }
 
+    log.info """\
+        O N T E A T E R - N F   P I P E L I N E
+        ===================================
+        Project directory       : $projectDir
+        Input ONT longreads     : ${ont_reads ?: 'N/A'}
+        Workflow mode           : ${workflow_mode}
+        Genome size             : ${params.genome_size}
+        BUSCO lineage           : ${params.BUSCO_lineage}
+        """
+        .stripIndent()
 
-    // Create channel of reads and assembled fastas for Racon polishing
-    //polish_flye_ch = pri_asm_flye_ch.join(trimreads_ch)
-    //polish_nd_ch = pri_asm_nd_ch.join(trimreads_ch)
-    
-    // Polish and merge genomes
-    //racon_flye_ch = RACON_FLYE(polish_flye_ch)
-    //racon_nd_ch = RACON_ND(polish_nd_ch)
-    
-    //merge and purge duplicate contigs
-    //merged_ch = MERGE_ASSEMBLIES_QUICKMERGE(quast_flye_ch, quast_nd_ch)
-    //merged_purged_ch = PURGE_HAPLOTYPIC_DUPLICATES(merged_ch) //replace p_dups call(s) with wrapper script.
-    
-    // QC AND VISUALIZE ASSEMBLED GENOME:
-        /*depth_assess_ch = MOSDEPTH(merged_purged_ch)
-        visual_output_ch = VISUALIZE(merged_purged_ch, depth_assess_ch)
-         calls 'percent_of_genome_over_1mil.py'+'visualize_contig_lengths.R' to visualize dist. of contigs
-         also calls 'flag_contig_depth.R' from mosdepth output - indicates probable mtDNA/bacterial contamination
-         all called from ./modules/helper_scripts
-         outputs .pdfs of relevant stats
-         */
-    
-//    publish:
-//    final = Channel.("Hello World")
+    def ch_rawreads = ont_reads ? channel.fromPath(ont_reads) : channel.empty()
+
+    def ch_trimreads
+    def ch_raw_viz
+    def ch_trim_viz
+    if (['run', 'trim'].contains(workflow_mode)) {
+        PREPROCESS_DATA(ch_rawreads)
+        ch_trimreads = PREPROCESS_DATA.out.trimreads
+        ch_raw_viz = PREPROCESS_DATA.out.rawread_viz
+        ch_trim_viz = PREPROCESS_DATA.out.trimread_viz
+    } else {
+        // assemble mode starts directly from provided reads.
+        ch_trimreads = ch_rawreads
+        ch_raw_viz = channel.empty()
+        ch_trim_viz = channel.empty()
+    }
+
+    def ch_trimreads_publish = (['run', 'trim'].contains(workflow_mode)) ? ch_trimreads : channel.empty()
+    def ch_flye_polished = channel.empty()
+    def ch_nextdenovo_polished = channel.empty()
+    def ch_merged_assembly = channel.empty()
+    def ch_purged_assembly = channel.empty()
+    def ch_qc_quast = channel.empty()
+    def ch_qc_compleasm = channel.empty()
+
+    if (['run', 'assemble'].contains(workflow_mode)) {
+        PRIMARY_ASSEMBLY(ch_trimreads)
+        ch_flye_polished = PRIMARY_ASSEMBLY.out.flye_polished
+        ch_nextdenovo_polished = PRIMARY_ASSEMBLY.out.nextdenovo_polished
+    }
+
+    if (workflow_mode == 'postprocess') {
+        def flye_path = file(params.flye_asm)
+        def nd_path = file(params.nd_asm)
+        def flye_sample = flye_path.simpleName.replaceFirst(/_Flye(_racon)?$/, '')
+        def nd_sample = nd_path.simpleName.replaceFirst(/_nextDenovo(_racon)?$/, '')
+        ch_flye_polished = channel.of(tuple(flye_sample, 'Flye', flye_path))
+        ch_nextdenovo_polished = channel.of(tuple(nd_sample, 'nextDenovo', nd_path))
+    }
+
+    if (['run', 'postprocess'].contains(workflow_mode)) {
+        POSTPROCESS_ASSEMBLY(ch_flye_polished, ch_nextdenovo_polished)
+        ch_merged_assembly = POSTPROCESS_ASSEMBLY.out.merged_assembly
+        ch_purged_assembly = POSTPROCESS_ASSEMBLY.out.purged_assembly
+    }
+
+    if (['run', 'qc'].contains(workflow_mode)) {
+        def ch_qc_input = (workflow_mode == 'qc')
+            ? channel.of(tuple(file(params.final_asm).simpleName, file(params.final_asm)))
+            : ch_purged_assembly.map { sample_id, fasta -> tuple(sample_id, fasta) }
+        QC_WORKFLOW(ch_qc_input)
+        ch_qc_quast = QC_WORKFLOW.out.quast
+        ch_qc_compleasm = QC_WORKFLOW.out.compleasm
+    }
+
+    publish:
+    raw_read_qc = ch_raw_viz
+    trim_read_qc = ch_trim_viz
+    trimmed_reads = ch_trimreads_publish
+    flye_polished = ch_flye_polished
+    nextdenovo_polished = ch_nextdenovo_polished
+    merged_assembly = ch_merged_assembly
+    purged_assembly = ch_purged_assembly
+    qc_quast = ch_qc_quast
+    qc_compleasm = ch_qc_compleasm
 }
 
-//output {
-//    final {}
-//}
+output {
+    raw_read_qc {
+        path "${params.prefix}/reads"
+    }
+    trim_read_qc {
+        path "${params.prefix}/reads"
+    }
+    trimmed_reads {
+        path "${params.prefix}/reads"
+    }
+    flye_polished {
+        path "${params.prefix}/assemblies"
+    }
+    nextdenovo_polished {
+        path "${params.prefix}/assemblies"
+    }
+    merged_assembly {
+        path "${params.prefix}/assemblies"
+    }
+    purged_assembly {
+        path "${params.prefix}/assemblies"
+    }
+    qc_quast {
+        path "${params.prefix}/assemblies"
+    }
+    qc_compleasm {
+        path "${params.prefix}/assemblies"
+    }
+}

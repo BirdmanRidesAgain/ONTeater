@@ -5,35 +5,73 @@ from argparse import ArgumentParser
 import subprocess
 
 def main():
-    ### DEFINE AND CHECK ARGS
-    parser = ArgumentParser(description="Assembles raw reads.")
-    parser.add_argument('-o','--ONT_rds', type=str, required=True)
-    parser.add_argument('-gs','--genome_size', type=str, required=True)
-    parser.add_argument('-b','--BUSCO_lineage', type=str, required=True)
-    parser.add_argument('-t','--threads', type=int)
-    parser.add_argument('-pro','--profile', type=str)
-    parser.add_argument('-wt','--with_trace', type=str)
-    parser.add_argument('-wr','--with_report', type=str)
-    parser.add_argument('-pre','--prefix', type=str, default='out')
+    parser = ArgumentParser(description="Run the ONTeater Nextflow pipeline.")
+    parser.add_argument("-o", "--ONT_rds", type=str, help="Path to ONT reads (preferred flag).")
+    parser.add_argument("--ONT_raw", type=str, help="Backward-compatible alias for ONT reads.")
+    parser.add_argument("-gs", "--genome_size", type=str)
+    parser.add_argument("-b", "--BUSCO_lineage", type=str)
+    parser.add_argument("-t", "--threads", type=int)
+    parser.add_argument("-w", "--workflow", type=str, default="run")
+    parser.add_argument("--flye_asm", type=str)
+    parser.add_argument("--nd_asm", type=str)
+    parser.add_argument("--final_asm", type=str)
+    parser.add_argument("-pro", "--profile", type=str)
+    parser.add_argument("--trace", type=str)
+    parser.add_argument("--report", type=str)
+    parser.add_argument("-pre", "--prefix", type=str, default="out")
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
+    workflow_mode = str(args.workflow)
+    ont_reads = args.ONT_rds or args.ONT_raw
 
-    nf_variables = ['profile', 'with_trace', 'with_report']
-    # Build a single command string from all provided arguments
-    command_items = ['./main.nf']
-    for name, value in vars(args).items():
-        if value is None:
-            continue
-        # nextflow variables need single quotes
-        if str(name) in nf_variables:
-            command_items.append(f'-{name}')
-            command_items.append(str(value))
-            continue
-        command_items.append(f"--{name}")
-        command_items.append(str(value))
-    command = " ".join(command_items)
-    # Run the pipeline
-    subprocess.run(command.split())
+    if workflow_mode in {"run", "trim", "assemble"} and not ont_reads:
+        parser.error("Provide ONT reads via --ONT_rds (preferred) or --ONT_raw.")
+    if workflow_mode in {"run", "trim", "assemble"}:
+        if args.genome_size is None:
+            parser.error(f"--genome_size is required for workflow '{workflow_mode}'.")
+        if args.BUSCO_lineage is None:
+            parser.error(f"--BUSCO_lineage is required for workflow '{workflow_mode}'.")
+    if workflow_mode == "postprocess" and (args.flye_asm is None or args.nd_asm is None):
+        parser.error("--flye_asm and --nd_asm are required for workflow 'postprocess'.")
+    if workflow_mode == "qc" and args.final_asm is None:
+        parser.error("--final_asm is required for workflow 'qc'.")
+
+    cmd = [
+        "nextflow",
+        "run",
+        "main.nf",
+        "--workflow",
+        workflow_mode,
+        "--prefix",
+        str(args.prefix),
+    ]
+
+    if ont_reads:
+        cmd.extend(["--ONT_rds", ont_reads])
+    if args.genome_size is not None:
+        cmd.extend(["--genome_size", str(args.genome_size)])
+    if args.BUSCO_lineage is not None:
+        cmd.extend(["--BUSCO_lineage", str(args.BUSCO_lineage)])
+    if args.flye_asm:
+        cmd.extend(["--flye_asm", str(args.flye_asm)])
+    if args.nd_asm:
+        cmd.extend(["--nd_asm", str(args.nd_asm)])
+    if args.final_asm:
+        cmd.extend(["--final_asm", str(args.final_asm)])
+
+    if args.threads is not None:
+        cmd.extend(["--threads", str(args.threads)])
+    if args.profile:
+        cmd.extend(["-profile", str(args.profile)])
+    if args.trace:
+        cmd.extend(["-with-trace", str(args.trace)])
+    if args.report:
+        cmd.extend(["-with-report", str(args.report)])
+    if args.resume:
+        cmd.append("-resume")
+
+    subprocess.run(cmd, check=False)
 
 # If this is being imported
 if __name__=="__main__":

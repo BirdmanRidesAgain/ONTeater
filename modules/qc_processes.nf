@@ -12,12 +12,19 @@ process QC_QUAST {
 
     script:
     sample_id = sample_id
+    boolean use_stub = params.qc_stub ?: false
 
-    """
-    # run quast
-    quast -ek $fasta --out ${sample_id}_final --no-html
-    mv ${sample_id}_final/report.txt ${sample_id}_final_quast_report.txt
-    """
+    if (use_stub) {
+        """
+        printf "stub\\tQC_QUAST\\t%s\\n" "$sample_id" > ${sample_id}_final_quast_report.txt
+        """
+    } else {
+        """
+        # run quast
+        quast -ek $fasta --out ${sample_id}_final --no-html
+        mv ${sample_id}_final/report.txt ${sample_id}_final_quast_report.txt
+        """
+    }
 }
 
 process QC_COMPLEASM {
@@ -35,8 +42,13 @@ process QC_COMPLEASM {
     sample_id = sample_id
     Integer threads = 40
     lineage = params.BUSCO_lineage
+    boolean use_stub = params.qc_stub ?: false
 
-    if (lineage == null) { //use autolineage
+    if (use_stub) {
+        """
+        printf "stub\\tQC_COMPLEASM\\t%s\\n" "$sample_id" > ${sample_id}_final_compleasm_report.txt
+        """
+    } else if (lineage == null) { //use autolineage
         """
         compleasm run --autolineage -t $threads -a $fasta -o ${sample_id}
         mv ${sample_id}/summary.txt ${sample_id}_final_compleasm_report.txt

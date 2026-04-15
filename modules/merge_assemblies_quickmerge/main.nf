@@ -1,21 +1,6 @@
-<<<<<<< HEAD:modules/unsupported_processes.nf
-/*
-process REMOVE_CONTAMINANTS {
-    tag "Removing non-eukaryote reads: $sample_id"
-}*/
-
-/*
-
-/*
-process MOSDEPTH {
-    tag "Outputs depth-per-contig stats from input assembly"
-}
-*/
-=======
 process MERGE_ASSEMBLIES_QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
     publishDir "results/merged_assemblies", mode: 'copy'
-    conda 'bioconda::quickmerge'
 
     input:
     tuple val(sample_id_1), val(assembler_1), val(n50_1), val(num_large_contigs_1), path(fasta_1) //this is flye
@@ -25,7 +10,7 @@ process MERGE_ASSEMBLIES_QUICKMERGE {
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_major_merged.fa")
 
     script:
-    sample_id = sample_id_1 //they're all the same sample_id, ffs
+    sample_id = sample_id_1
     assembler = (n50_1 > n50_2) ? assembler_1 : assembler_2
     
     if (n50_1 > n50_2) {
@@ -42,13 +27,14 @@ process MERGE_ASSEMBLIES_QUICKMERGE {
     }
     
     stub:
-    sample_id = sample_id_1 //they're all the same sample_id, ffs
+    sample_id = sample_id_1
     assembler = (n50_1 > n50_2) ? assembler_1 : assembler_2
     
     if (n50_1 > n50_2) {
         println("$assembler_1 assembly more contiguous. Merging $fasta_2 into $fasta_1")
         """
         touch "${sample_id}_${assembler}_major_merged.fa"
+        # merge_wrapper.py hybrid_assembly.fasta self_assembly.fasta
         """
     }
     else { //it's very unlikely that we'll have a tie.
@@ -58,4 +44,3 @@ process MERGE_ASSEMBLIES_QUICKMERGE {
         """ 
     }
 }
->>>>>>> frontend:modules/merge_assemblies_quickmerge/main.nf
