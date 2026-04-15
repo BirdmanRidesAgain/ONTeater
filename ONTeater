@@ -3,11 +3,11 @@
 
 from argparse import ArgumentParser
 import subprocess
+import sys
 
 def main():
     parser = ArgumentParser(description="Run the ONTeater Nextflow pipeline.")
-    parser.add_argument("-o", "--ONT_rds", type=str, help="Path to ONT reads (preferred flag).")
-    parser.add_argument("--ONT_raw", type=str, help="Backward-compatible alias for ONT reads.")
+    parser.add_argument("-o", "--ONT_rds", type=str, help="Path to ONT reads.")
     parser.add_argument("-gs", "--genome_size", type=str)
     parser.add_argument("-b", "--BUSCO_lineage", type=str)
     parser.add_argument("-t", "--threads", type=int)
@@ -25,10 +25,10 @@ def main():
     args = parser.parse_args()
 
     workflow_mode = str(args.workflow)
-    ont_reads = args.ONT_rds or args.ONT_raw
+    ont_reads = args.ONT_rds
 
     if workflow_mode in {"run", "trim", "assemble"} and not ont_reads:
-        parser.error("Provide ONT reads via --ONT_rds (preferred) or --ONT_raw.")
+        parser.error("Provide ONT reads via --ONT_rds.")
     if workflow_mode in {"run", "trim", "assemble"}:
         if args.genome_size is None:
             parser.error(f"--genome_size is required for workflow '{workflow_mode}'.")
@@ -67,6 +67,12 @@ def main():
     if args.profile:
         cmd.extend(["-profile", str(args.profile)])
     if args.container_image:
+        profile_str = str(args.profile) if args.profile else ""
+        if "docker" not in [p.strip() for p in profile_str.split(",") if p.strip()]:
+            print(
+                "WARNING: --container_image is only used with the docker profile.",
+                file=sys.stderr,
+            )
         cmd.extend(["--container_image", str(args.container_image)])
     if args.polish_stub:
         cmd.extend(["--polish_stub", "true"])

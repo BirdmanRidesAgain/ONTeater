@@ -6,7 +6,7 @@
 #   ./scripts/smoke_test_docker.sh
 #
 # Optional:
-#   CONTAINER_IMAGE=my/oneteater:1.0.0 ./scripts/smoke_test_docker.sh
+#   CONTAINER_IMAGE=my/oneteater:1.0.0-amd64 ./scripts/smoke_test_docker.sh
 #   SKIP_IMAGE_BUILD=1 ./scripts/smoke_test_docker.sh   # assume image already exists
 #   WORKFLOW_MODE=trim ./scripts/smoke_test_docker.sh
 
@@ -23,7 +23,7 @@ RUN_FULL="${RUN_FULL:-0}"
 FLYE_ASM="${FLYE_ASM:-}"
 ND_ASM="${ND_ASM:-}"
 FINAL_ASM="${FINAL_ASM:-}"
-CONTAINER_IMAGE="${CONTAINER_IMAGE:-oneteater:1.0.0}"
+CONTAINER_IMAGE="${CONTAINER_IMAGE:-oneteater:1.0.0-amd64}"
 SKIP_IMAGE_BUILD="${SKIP_IMAGE_BUILD:-0}"
 POLISH_STUB="${POLISH_STUB:-0}"
 
@@ -40,7 +40,7 @@ fi
 if [[ "$SKIP_IMAGE_BUILD" != "1" ]]; then
   if ! docker image inspect "$CONTAINER_IMAGE" >/dev/null 2>&1; then
     echo "[smoke-docker] image not found locally; building: $CONTAINER_IMAGE"
-    docker build -t "$CONTAINER_IMAGE" -f docker/Dockerfile .
+    docker buildx build --platform linux/amd64 -t "$CONTAINER_IMAGE" -f docker/Dockerfile --load .
   else
     echo "[smoke-docker] using existing image: $CONTAINER_IMAGE"
   fi

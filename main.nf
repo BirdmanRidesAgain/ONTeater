@@ -17,16 +17,11 @@ include { PREPROCESS_DATA } from './modules/preprocess_reads.nf'
 include { PRIMARY_ASSEMBLY } from './modules/primary_assembly.nf'
 include { POSTPROCESS_ASSEMBLY } from './modules/postprocess_assembly.nf'
 include { QC_WORKFLOW } from './modules/qc_workflow.nf'
-//include { ASSEMBLE_FLYE } from './modules/assemble_flye/main.nf' //primary assemblers
-//include { GET_NEXTDENOVO_PARAMS } from './modules/get_nextdenovo_params/main.nf'
-//include { ASSEMBLE_NEXTDENOVO } from './modules/assemble_nextdenovo/main.nf'
-//include { //polishing-related
-//    POLISH_RACON as RACON_FLYE; POLISH_RACON as RACON_ND; 
-//    } from './modules/polish_racon/main.nf'
 
+params.container_image = params.container_image ?: 'oneteater:1.0.0-amd64'
 workflow {
     main:
-    def ont_reads = params.ONT_rds ?: params.ONT_raw
+    def ont_reads = params.ONT_rds
     def workflow_mode = params.workflow ?: 'run'
     def valid_modes = ['run', 'trim', 'assemble', 'postprocess', 'qc']
 
@@ -40,7 +35,7 @@ workflow {
     }
 
     if (['run', 'trim', 'assemble'].contains(workflow_mode) && !ont_reads) {
-        error "No ONT reads provided. Use --ONT_rds (preferred) or --ONT_raw."
+        error "No ONT reads provided. Use --ONT_rds."
     }
     if (workflow_mode == 'postprocess' && (!params.flye_asm || !params.nd_asm)) {
         error "Workflow mode 'postprocess' requires --flye_asm and --nd_asm."

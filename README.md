@@ -32,7 +32,7 @@ nextflow run main.nf -profile standard --ONT_rds ...
 Build a single image that contains all bioinformatics tools (Linux). From the repository root:
 
 ```bash
-docker build -t oneteater:1.0.0 -f docker/Dockerfile .
+docker buildx build --platform linux/amd64 -t oneteater:1.0.0-amd64 -f docker/Dockerfile --load .
 ```
 
 Run the pipeline with conda **disabled** so every process uses that image:
@@ -44,7 +44,7 @@ nextflow run main.nf -profile docker --ONT_rds ... --genome_size ... --BUSCO_lin
 Use a different image name or registry:
 
 ```bash
-nextflow run main.nf -profile docker --container_image myregistry/oneteater:1.0.0 ...
+nextflow run main.nf -profile docker --container_image myregistry/oneteater:1.0.0-amd64 ...
 ```
 
 **Note:** Nextflow and your input data paths still run on the host; only **task processes** execute inside the container. Mounting and file permissions follow [Nextflow’s Docker documentation](https://www.nextflow.io/docs/latest/docker.html).
@@ -63,14 +63,13 @@ Notably, `--trace` and `--report` are useful.
 |Option|Default|Data type|Description|
 |---|---|---|---|
 |`--help`|NA|Flag|Set to print a help message and exit.|
-|`--ONT_rds`|`null`|String|A path to a gzipped file of ONT reads used for assembly. Preferred input flag.|
-|`--ONT_raw`|`null`|String|Backward-compatible alias for `--ONT_rds`.|
+|`--ONT_rds`|`null`|String|A path to a gzipped file of ONT reads used for assembly.|
 |`--genome_size`|`1`|Float|A value representing genome size in gigabasepairs (g). The value does not need to be precise, and can be approximated to nearest 10th - eg, `3`, or `3.2` for a human.|
 |`--workflow`|`run`|String|Entry point for development/testing. Wired modes: `run`, `trim`, `assemble`, `postprocess`, `qc`.|
 |`--flye_asm`|`null`|String|A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
 |`--nd_asm`|`null`|String|A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
 |`--final_asm`|`null`|String|Path to a final assembly FASTA used when running `--workflow qc` directly.|
-|`--container_image`|`oneteater:1.0.0`|String|Docker image used with `-profile docker` (override for your registry or tag).|
+|`--container_image`|`oneteater:1.0.0-amd64`|String|Docker image used with `-profile docker` (override for a custom image/tag).|
 
 ## High-level Description
 
@@ -143,7 +142,7 @@ For fast wiring/tests without QUAST/Compleasm runtime dependencies, use the `qc_
 nextflow run main.nf --workflow qc --final_asm <final_assembly.fa> -profile qc_stub
 ```
 
-This writes lightweight stub reports for `QC_QUAST` and `QC_COMPLEASM`.
+This writes lightweight stub reports for `ASSESS_ASSEMBLY_QUAST` and `ASSESS_ASSEMBLY_COMPLEASM`.
 
 ## Smoke test
 
@@ -170,7 +169,7 @@ Separate script so Docker and conda smoke paths do not interfere:
 ./scripts/smoke_test_docker.sh
 ```
 
-This builds `oneteater:1.0.0` from `docker/Dockerfile` if the image is missing, then runs the same checks with `-profile docker` and distinct prefixes (`smoke_direct_docker`, `smoke_wrapper_docker`).
+This builds `oneteater:1.0.0-amd64` from `docker/Dockerfile` if the image is missing, then runs the same checks with `-profile docker` and distinct prefixes (`smoke_direct_docker`, `smoke_wrapper_docker`).
 
 Optional:
 
