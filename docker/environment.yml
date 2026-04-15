@@ -1,0 +1,20 @@
+# Single environment for ONTeater process containers (linux/amd64 or linux/arm64).
+# Pin Python for NextDenovo correction stage stability.
+#
+# quickmerge / purge_dups are omitted: postprocess merge/purge are stubs and those
+# packages often fail to solve on arm64. Add them back when real merge/purge runs.
+# QC runtime tools (quast/compleasm/sepp) are intentionally excluded from this
+# smoke image to keep solving stable across platforms; qc_stub covers QC wiring.
+name: oneteater
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - pigz
+  - flye
+  - minimap2
+  - racon=1.5.0=*_4
+  - nanoplot
+  - nanofilt
+  - nextdenovo=2.5.2

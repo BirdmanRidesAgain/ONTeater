@@ -17,6 +17,44 @@ nextflow run main.nf --ONT_rds <input.fq.gz> --genome_size 1.1 --BUSCO_lineage <
 
 `--workflow run` is the default and currently executes preprocessing plus primary assembly.
 
+## Execution profiles
+
+### Conda (default)
+
+Uses Nextflow’s built-in conda integration (`-profile standard` or `-profile conda`). This is flexible but **solver-sensitive** across OS and CPU architecture.
+
+```bash
+nextflow run main.nf -profile standard --ONT_rds ...
+```
+
+### Docker (recommended for reproducibility)
+
+Build a single image that contains all bioinformatics tools (Linux). From the repository root:
+
+```bash
+docker build -t oneteater:1.0.0 -f docker/Dockerfile .
+```
+
+Run the pipeline with conda **disabled** so every process uses that image:
+
+```bash
+nextflow run main.nf -profile docker --ONT_rds ... --genome_size ... --BUSCO_lineage ...
+```
+
+Use a different image name or registry:
+
+```bash
+nextflow run main.nf -profile docker --container_image myregistry/oneteater:1.0.0 ...
+```
+
+**Note:** Nextflow and your input data paths still run on the host; only **task processes** execute inside the container. Mounting and file permissions follow [Nextflow’s Docker documentation](https://www.nextflow.io/docs/latest/docker.html).
+
+For **Apple Silicon** building an image intended for **linux/amd64** clusters:
+
+```bash
+docker buildx build --platform linux/amd64 -t oneteater:1.0.0-amd64 -f docker/Dockerfile .
+```
+
 ## Options
 
 All native options in `NextFlow` are usable in `ONTeater`.
@@ -32,6 +70,7 @@ Notably, `--trace` and `--report` are useful.
 |`--flye_asm`|`null`|String|A path to a `Flye` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
 |`--nd_asm`|`null`|String|A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
 |`--final_asm`|`null`|String|Path to a final assembly FASTA used when running `--workflow qc` directly.|
+|`--container_image`|`oneteater:1.0.0`|String|Docker image used with `-profile docker` (override for your registry or tag).|
 
 ## High-level Description
 
@@ -108,20 +147,35 @@ This writes lightweight stub reports for `QC_QUAST` and `QC_COMPLEASM`.
 
 ## Smoke test
 
-Use the bundled smoke test script for quick user-perspective validation:
+### Conda (default profile)
 
 ```bash
 ./scripts/smoke_test.sh
 ```
 
-By default, it runs `--workflow trim` for both direct Nextflow and wrapper entry paths, then validates expected preprocess outputs.
+By default this uses **conda** (`standard` profile) and `--workflow run`, then validates outputs under `results/smoke_direct/` and `results/smoke_wrapper/` (including `reads/`, merged assemblies, and QC paths when applicable).
 
 Useful overrides:
 
-- `WORKFLOW_MODE=run ./scripts/smoke_test.sh` to exercise preprocessing + primary assembly wiring.
-- `RUN_FULL=1 ./scripts/smoke_test.sh` to additionally launch a separate full `workflow run` check.
+- `WORKFLOW_MODE=trim ./scripts/smoke_test.sh` for preprocess-only.
+- `RUN_FULL=1 ./scripts/smoke_test.sh` to additionally launch a second full `workflow run` with prefix `smoke_full`.
 - `WORKFLOW_MODE=postprocess FLYE_ASM=<flye.fa> ND_ASM=<nd.fa> ./scripts/smoke_test.sh`
 - `WORKFLOW_MODE=qc FINAL_ASM=<final.fa> ./scripts/smoke_test.sh`
+
+### Docker (`docker` profile)
+
+Separate script so Docker and conda smoke paths do not interfere:
+
+```bash
+./scripts/smoke_test_docker.sh
+```
+
+This builds `oneteater:1.0.0` from `docker/Dockerfile` if the image is missing, then runs the same checks with `-profile docker` and distinct prefixes (`smoke_direct_docker`, `smoke_wrapper_docker`).
+
+Optional:
+
+- `CONTAINER_IMAGE=my/oneteater:dev ./scripts/smoke_test_docker.sh`
+- `SKIP_IMAGE_BUILD=1 ./scripts/smoke_test_docker.sh` if the image is already loaded locally.
 
 ### Flowchart
 
@@ -135,7 +189,7 @@ Useful overrides:
 
 The pipeline includes two dependencies: [NextFlow](https://www.nextflow.io/docs/latest/getstarted.html), and [Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 You will need to install all three of these for the pipeline to run.
-[Docker](https://docs.docker.com/engine/install/) and [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html) are not currently supported, but a `Docker` port is in the works.
+[Docker](https://docs.docker.com/engine/install/) is supported via the `docker` profile and `scripts/smoke_test_docker.sh`. [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html) is not wired in-tree yet.
 
 ### Requirements
 

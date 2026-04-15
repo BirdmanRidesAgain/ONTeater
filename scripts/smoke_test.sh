@@ -78,21 +78,21 @@ validate_prefix() {
 
   [[ -d "$root" ]] || { echo "[smoke] ERROR: missing $root" >&2; return 1; }
   if [[ "$WORKFLOW_MODE" == "trim" || "$WORKFLOW_MODE" == "run" ]]; then
-    [[ -d "$root/$RAW_VIZ" ]] || { echo "[smoke] ERROR: missing $root/$RAW_VIZ (raw read NanoPlot)" >&2; return 1; }
-    [[ -f "$root/$RAW_VIZ/${SAMPLE_BASE}_rawNanoStats.txt" ]] || {
-      echo "[smoke] ERROR: missing raw NanoStats under $root/$RAW_VIZ" >&2
+    [[ -d "$root/reads/$RAW_VIZ" ]] || { echo "[smoke] ERROR: missing $root/reads/$RAW_VIZ (raw read NanoPlot)" >&2; return 1; }
+    [[ -f "$root/reads/$RAW_VIZ/${SAMPLE_BASE}_rawNanoStats.txt" ]] || {
+      echo "[smoke] ERROR: missing raw NanoStats under $root/reads/$RAW_VIZ" >&2
       return 1
     }
-    [[ -d "$root/$FILTERED_VIZ" ]] || {
-      echo "[smoke] ERROR: missing $root/$FILTERED_VIZ (filtered read NanoPlot)" >&2
+    [[ -d "$root/reads/$FILTERED_VIZ" ]] || {
+      echo "[smoke] ERROR: missing $root/reads/$FILTERED_VIZ (filtered read NanoPlot)" >&2
       return 1
     }
-    [[ -f "$root/$FILTERED_VIZ/${SAMPLE_BASE}_trim_filteredNanoStats.txt" ]] || {
-      echo "[smoke] ERROR: missing filtered NanoStats under $root/$FILTERED_VIZ" >&2
+    [[ -f "$root/reads/$FILTERED_VIZ/${SAMPLE_BASE}_trim_filteredNanoStats.txt" ]] || {
+      echo "[smoke] ERROR: missing filtered NanoStats under $root/reads/$FILTERED_VIZ" >&2
       return 1
     }
-    [[ -f "$root/$TRIM_FASTQ" ]] || { echo "[smoke] ERROR: missing trimmed reads $root/$TRIM_FASTQ" >&2; return 1; }
-    [[ -s "$root/$TRIM_FASTQ" ]] || { echo "[smoke] ERROR: trimmed reads empty: $root/$TRIM_FASTQ" >&2; return 1; }
+    [[ -f "$root/reads/$TRIM_FASTQ" ]] || { echo "[smoke] ERROR: missing trimmed reads $root/reads/$TRIM_FASTQ" >&2; return 1; }
+    [[ -s "$root/reads/$TRIM_FASTQ" ]] || { echo "[smoke] ERROR: trimmed reads empty: $root/reads/$TRIM_FASTQ" >&2; return 1; }
   fi
   if [[ "$WORKFLOW_MODE" == "postprocess" || "$WORKFLOW_MODE" == "run" ]]; then
     [[ -d "results/merged_assemblies" ]] || { echo "[smoke] ERROR: missing results/merged_assemblies" >&2; return 1; }

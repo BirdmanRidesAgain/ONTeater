@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--trace", type=str)
     parser.add_argument("--report", type=str)
     parser.add_argument("-pre", "--prefix", type=str, default="out")
+    parser.add_argument("--container_image", type=str, help="Docker image tag (with -profile docker).")
+    parser.add_argument("--polish_stub", action="store_true", help="Skip racon and pass assemblies through unchanged.")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
@@ -64,6 +66,10 @@ def main():
         cmd.extend(["--threads", str(args.threads)])
     if args.profile:
         cmd.extend(["-profile", str(args.profile)])
+    if args.container_image:
+        cmd.extend(["--container_image", str(args.container_image)])
+    if args.polish_stub:
+        cmd.extend(["--polish_stub", "true"])
     if args.trace:
         cmd.extend(["-with-trace", str(args.trace)])
     if args.report:

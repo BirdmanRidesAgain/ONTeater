@@ -11,12 +11,19 @@ process POLISH_RACON {
     tuple val(sample_id), val(assembler), path("${sample_id}_${assembler}_racon.fa")
 
     script:
+    boolean use_stub = params.polish_stub ?: false
     Integer threads = 20
     sample_id = sample_id
     assembler = assembler
 
-    """
-    minimap2 -t $threads $fasta -ax map-ont $reads > ${assembler}.sam
-    racon -t $threads -u $reads ${assembler}.sam $fasta > ${sample_id}_${assembler}_racon.fa
-    """
+    if (use_stub) {
+        """
+        cp $fasta ${sample_id}_${assembler}_racon.fa
+        """
+    } else {
+        """
+        minimap2 -t $threads $fasta -ax map-ont $reads > ${assembler}.sam
+        racon -t $threads -u $reads ${assembler}.sam $fasta > ${sample_id}_${assembler}_racon.fa
+        """
+    }
 }
