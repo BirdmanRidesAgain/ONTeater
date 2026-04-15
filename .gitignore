@@ -3,6 +3,9 @@
 # Ignore all hidden files in root directory
 /.*
 
+# Ignore artifacts from OSX
+**/.DS_Store
+
 # Explicitly include the base directory's '.gitignore' as an exception - you want git to track that one
 !/.gitignore
 plugins/
@@ -13,6 +16,7 @@ plugins/
 plugins/* 
 conda_cache/
 tmp/
+test_data/
 
 
 
