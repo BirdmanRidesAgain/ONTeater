@@ -6,6 +6,7 @@ process GET_ASSEMBLY_CONTIGUITY {
 
     input:
     tuple val(sample_id), val(assembler), path(fasta)
+    path contiguity_script
 
     output:
     tuple val(sample_id), val(assembler), path("n50.txt"), path("num_large_contigs.txt"), path("${sample_id}_${assembler}.fa")
@@ -13,47 +14,7 @@ process GET_ASSEMBLY_CONTIGUITY {
     script:
     """
     cp $fasta ${sample_id}_${assembler}.fa
-    python3 - <<'PY'
-from pathlib import Path
-
-fasta = Path("${fasta}")
-lengths = []
-cur_len = 0
-
-with fasta.open() as handle:
-    for line in handle:
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith(">"):
-            if cur_len:
-                lengths.append(cur_len)
-            cur_len = 0
-        else:
-            cur_len += len(line)
-
-if cur_len:
-    lengths.append(cur_len)
-
-if lengths:
-    lengths.sort(reverse=True)
-    total = sum(lengths)
-    cutoff = total / 2.0
-    csum = 0
-    n50 = 0
-    for L in lengths:
-        csum += L
-        if csum >= cutoff:
-            n50 = L
-            break
-    num_large = sum(1 for L in lengths if L >= 1_000_000)
-else:
-    n50 = 0
-    num_large = 0
-
-Path("n50.txt").write_text(str(n50) + "\\n")
-Path("num_large_contigs.txt").write_text(str(num_large) + "\\n")
-PY
+    python3 $contiguity_script --fasta ${sample_id}_${assembler}.fa --n50-out n50.txt --num-large-out num_large_contigs.txt
     """
 
     stub:
@@ -71,7 +32,8 @@ workflow POSTPROCESS_ASSEMBLY {
 
     main:
     ch_primary_polished = ch_flye_polished.mix(ch_nextdenovo_polished)
-    GET_ASSEMBLY_CONTIGUITY(ch_primary_polished)
+    ch_contiguity_script = channel.value(file("${projectDir}/bin/calc_contiguity.py"))
+    GET_ASSEMBLY_CONTIGUITY(ch_primary_polished, ch_contiguity_script)
     ch_contiguity_stats = GET_ASSEMBLY_CONTIGUITY.out.map { sample_id, assembler, n50_file, num_large_contigs_file, fasta ->
         def n50 = n50_file.text.trim().isLong() ? (n50_file.text.trim() as Long) : 0L
         def num_large_contigs = num_large_contigs_file.text.trim().isInteger() ? (num_large_contigs_file.text.trim() as Integer) : 0

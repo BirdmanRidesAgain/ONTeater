@@ -13,13 +13,8 @@ process ASSESS_ASSEMBLY_COMPLEASM {
     sample_id = sample_id
     Integer threads = 40
     lineage = params.BUSCO_lineage
-    boolean use_stub = params.qc_stub ?: false
 
-    if (use_stub) {
-        """
-        printf "stub\\tASSESS_ASSEMBLY_COMPLEASM\\t%s\\n" "$sample_id" > ${sample_id}_final_compleasm_report.txt
-        """
-    } else if (lineage == null) { // use autolineage
+    if (lineage == null) { // use autolineage
         """
         compleasm run --autolineage -t $threads -a $fasta -o ${sample_id}
         mv ${sample_id}/summary.txt ${sample_id}_final_compleasm_report.txt
@@ -30,4 +25,9 @@ process ASSESS_ASSEMBLY_COMPLEASM {
         mv ${sample_id}/summary.txt ${sample_id}_final_compleasm_report.txt
         """
     }
+
+    stub:
+    """
+    printf "stub\\tASSESS_ASSEMBLY_COMPLEASM\\t%s\\n" "$sample_id" > ${sample_id}_final_compleasm_report.txt
+    """
 }

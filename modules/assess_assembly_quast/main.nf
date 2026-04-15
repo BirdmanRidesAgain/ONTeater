@@ -11,17 +11,15 @@ process ASSESS_ASSEMBLY_QUAST {
 
     script:
     sample_id = sample_id
-    boolean use_stub = params.qc_stub ?: false
 
-    if (use_stub) {
-        """
-        printf "stub\\tASSESS_ASSEMBLY_QUAST\\t%s\\n" "$sample_id" > ${sample_id}_final_quast_report.txt
-        """
-    } else {
-        """
-        # run quast
-        quast -ek $fasta --out ${sample_id}_final --no-html
-        mv ${sample_id}_final/report.txt ${sample_id}_final_quast_report.txt
-        """
-    }
+    """
+    # run quast
+    quast -ek $fasta --out ${sample_id}_final --no-html
+    mv ${sample_id}_final/report.txt ${sample_id}_final_quast_report.txt
+    """
+
+    stub:
+    """
+    printf "stub\\tASSESS_ASSEMBLY_QUAST\\t%s\\n" "$sample_id" > ${sample_id}_final_quast_report.txt
+    """
 }

@@ -25,7 +25,7 @@ ND_ASM="${ND_ASM:-}"
 FINAL_ASM="${FINAL_ASM:-}"
 CONTAINER_IMAGE="${CONTAINER_IMAGE:-oneteater:1.0.0-amd64}"
 SKIP_IMAGE_BUILD="${SKIP_IMAGE_BUILD:-0}"
-POLISH_STUB="${POLISH_STUB:-0}"
+STUB_RUN="${STUB_RUN:-0}"
 
 echo "[smoke-docker] ONTeater root: $ROOT_DIR"
 echo "[smoke-docker] container image: $CONTAINER_IMAGE"
@@ -80,9 +80,9 @@ if [[ ! -f "$TEST_READS" ]]; then
   exit 1
 fi
 
-NF_DOCKER=( -profile docker,qc_stub --container_image "$CONTAINER_IMAGE" )
-if [[ "$POLISH_STUB" == "1" ]]; then
-  NF_DOCKER+=( --polish_stub true )
+NF_DOCKER=( -profile docker --container_image "$CONTAINER_IMAGE" )
+if [[ "$STUB_RUN" == "1" ]]; then
+  NF_DOCKER+=( -stub-run )
 fi
 
 echo "[smoke-docker] 1/3 help output"
@@ -95,15 +95,15 @@ nextflow run main.nf "${NF_DOCKER[@]}" \
   "${MODE_ARGS[@]}"
 
 echo "[smoke-docker] 3/3 wrapper run"
-if [[ "$POLISH_STUB" == "1" ]]; then
-  WRAPPER_POLISH_STUB=( --polish_stub )
+if [[ "$STUB_RUN" == "1" ]]; then
+  WRAPPER_STUB=( --stub )
 else
-  WRAPPER_POLISH_STUB=()
+  WRAPPER_STUB=()
 fi
 ./ONTeater \
   -pro docker \
   --container_image "$CONTAINER_IMAGE" \
-  "${WRAPPER_POLISH_STUB[@]}" \
+  "${WRAPPER_STUB[@]}" \
   --workflow "$WORKFLOW_MODE" \
   --prefix "$PREFIX_WRAPPER" \
   "${MODE_ARGS[@]}"

@@ -70,6 +70,7 @@ Notably, `--trace` and `--report` are useful.
 |`--nd_asm`|`null`|String|A path to a `NextDenovo` assembly. Used to bypass assembly and provide genomes directly to later parts of workflow.|
 |`--final_asm`|`null`|String|Path to a final assembly FASTA used when running `--workflow qc` directly.|
 |`--container_image`|`oneteater:1.0.0-amd64`|String|Docker image used with `-profile docker` (override for a custom image/tag).|
+|`--stub`|`false`|Flag|Run Nextflow native stub mode (`-stub-run`) for fast pipeline wiring checks.|
 
 ## High-level Description
 
@@ -134,15 +135,19 @@ Outputs are currently published to:
 - `results/merged_assemblies/` (merge + purged placeholders)
 - `results/QC/` (QUAST + Compleasm reports)
 
-### QC stub profile
+### Stub mode
 
-For fast wiring/tests without QUAST/Compleasm runtime dependencies, use the `qc_stub` profile:
+Use Nextflow native stub mode for fast wiring/tests:
 
 ```bash
-nextflow run main.nf --workflow qc --final_asm <final_assembly.fa> -profile qc_stub
+./ONTeater --workflow run --ONT_rds <reads.fq.gz> --genome_size 5m --BUSCO_lineage enterobacterales --stub
 ```
 
-This writes lightweight stub reports for `ASSESS_ASSEMBLY_QUAST` and `ASSESS_ASSEMBLY_COMPLEASM`.
+Equivalent native Nextflow call:
+
+```bash
+nextflow run main.nf --workflow run --ONT_rds <reads.fq.gz> --genome_size 5m --BUSCO_lineage enterobacterales -stub-run
+```
 
 ## Smoke test
 
@@ -175,6 +180,7 @@ Optional:
 
 - `CONTAINER_IMAGE=my/oneteater:dev ./scripts/smoke_test_docker.sh`
 - `SKIP_IMAGE_BUILD=1 ./scripts/smoke_test_docker.sh` if the image is already loaded locally.
+- `STUB_RUN=1 ./scripts/smoke_test_docker.sh` to execute smoke with Nextflow native stubs.
 
 ### Flowchart
 

@@ -18,7 +18,6 @@ include { PRIMARY_ASSEMBLY } from './modules/primary_assembly.nf'
 include { POSTPROCESS_ASSEMBLY } from './modules/postprocess_assembly.nf'
 include { QC_WORKFLOW } from './modules/qc_workflow.nf'
 
-params.container_image = params.container_image ?: 'oneteater:1.0.0-amd64'
 workflow {
     main:
     def ont_reads = params.ONT_rds

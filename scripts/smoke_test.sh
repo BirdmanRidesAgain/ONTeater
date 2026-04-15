@@ -17,6 +17,10 @@ echo "[smoke] ONTeater root: $ROOT_DIR"
 echo "[smoke] test reads: $TEST_READS"
 echo "[smoke] workflow mode: $WORKFLOW_MODE"
 
+if [[ -n "${CONTAINER_IMAGE:-}" ]]; then
+  echo "[smoke] WARNING: CONTAINER_IMAGE is ignored by smoke_test.sh (conda profile). Use scripts/smoke_test_docker.sh for container runs." >&2
+fi
+
 build_mode_args() {
   MODE_ARGS=()
   case "$WORKFLOW_MODE" in
