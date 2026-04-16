@@ -1,6 +1,5 @@
 process MERGE_ASSEMBLIES_QUICKMERGE {
     tag "Merging $sample_id assemblies with Quickmerge"
-    publishDir "results/merged_assemblies", mode: 'copy'
     conda 'bioconda::quickmerge'
 
     input:

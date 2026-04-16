@@ -2,9 +2,9 @@
 # Pin Python for NextDenovo correction stage stability.
 #
 # quickmerge + purge_dups are required for postprocess merge/purge steps.
-# QC runtime tools (quast/compleasm/sepp) are intentionally excluded from this
-# smoke image to keep solving stable across platforms; use Nextflow `-stub-run`
-# (or wrapper `--stub`) for lightweight wiring checks.
+# QUAST: bioconda only ships py313/py27 builds; we install quast via pip into
+# this py310 env (validated on linux/amd64). Compleasm/sepp remain excluded
+# here due to solver conflicts; conda profile can still pull them per-process.
 name: oneteater
 channels:
   - conda-forge
@@ -20,3 +20,6 @@ dependencies:
   - nextdenovo=2.5.2
   - quickmerge
   - purge_dups
+  - pip
+  - pip:
+      - quast

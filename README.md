@@ -1,8 +1,15 @@
 # ONTeater
 
-A [NextFlow](https://www.nextflow.io/docs/latest/index.html)-enabled pipeline intended to produce highly-contiguous genome assemblies with only ONT input.
-Illumina shortreads and PacBio longreads are optionally supported.
-It can also be accessed at [workflowhub.eu](https://workflowhub.eu/workflows/1736).
+## Table of Contents
+
+
+
+## Introduction
+
+ONTeater is a [NextFlow](https://www.nextflow.io/docs/latest/index.html)-enabled pipeline intended to produce highly-contiguous genome assemblies with only ONT input.
+Illumina shortreads and PacBio longreads are not currently supported, but may be in the future.
+
+With the release of [Hifiasm](https://github.com/chhylp123/hifiasm?tab=readme-ov-file#ontonly)'s ONT-only assembly mode, we recommend using 
 
 ## Quickstart
 

@@ -7,8 +7,9 @@ workflow QC_WORKFLOW {
 
     main:
     ch_estimate_genome_bp_script = channel.value(file("${projectDir}/bin/estimate_genome_bp.py"))
+    ch_run_compleasm_script = channel.value(file("${projectDir}/bin/run_compleasm.py"))
     ASSESS_ASSEMBLY_QUAST(ch_assembly, ch_estimate_genome_bp_script)
-    ASSESS_ASSEMBLY_COMPLEASM(ch_assembly)
+    ASSESS_ASSEMBLY_COMPLEASM(ch_assembly, ch_run_compleasm_script)
 
     emit:
     quast = ASSESS_ASSEMBLY_QUAST.out

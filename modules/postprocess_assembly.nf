@@ -49,5 +49,5 @@ workflow POSTPROCESS_ASSEMBLY {
 
     emit:
     merged_assembly = ch_merged
-    purged_assembly = PURGE_HAPLOTYPIC_DUPLICATES.out
+    purged_assembly = PURGE_HAPLOTYPIC_DUPLICATES.out.purged_assembly
 }

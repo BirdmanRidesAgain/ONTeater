@@ -98,7 +98,8 @@ def main():
     if args.resume:
         cmd.append("-resume")
 
-    subprocess.run(cmd, check=False)
+    completed = subprocess.run(cmd, check=False)
+    sys.exit(completed.returncode)
 
 # If this is being imported
 if __name__=="__main__":

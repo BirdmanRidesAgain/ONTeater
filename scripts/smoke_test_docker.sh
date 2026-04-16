@@ -137,10 +137,14 @@ validate_prefix() {
     [[ -s "$root/reads/$TRIM_FASTQ" ]] || { echo "[smoke-docker] ERROR: trimmed reads empty: $root/reads/$TRIM_FASTQ" >&2; return 1; }
   fi
   if [[ "$WORKFLOW_MODE" == "postprocess" || "$WORKFLOW_MODE" == "run" ]]; then
-    [[ -d "results/merged_assemblies" ]] || { echo "[smoke-docker] ERROR: missing results/merged_assemblies" >&2; return 1; }
+    local asm_dir="$root/assemblies"
+    compgen -G "$asm_dir/*_major_merged.fa" >/dev/null || { echo "[smoke-docker] ERROR: missing merged assembly under $asm_dir" >&2; return 1; }
+    compgen -G "$asm_dir/*_major_merged_purged.fa" >/dev/null || { echo "[smoke-docker] ERROR: missing purged assembly under $asm_dir" >&2; return 1; }
   fi
   if [[ "$WORKFLOW_MODE" == "qc" || "$WORKFLOW_MODE" == "run" ]]; then
-    [[ -d "results/QC" ]] || { echo "[smoke-docker] ERROR: missing results/QC" >&2; return 1; }
+    local asm_dir="$root/assemblies"
+    compgen -G "$asm_dir/*_final_quast_report.txt" >/dev/null || { echo "[smoke-docker] ERROR: missing QUAST report under $asm_dir" >&2; return 1; }
+    compgen -G "$asm_dir/*_final_compleasm_report.txt" >/dev/null || { echo "[smoke-docker] ERROR: missing Compleasm report under $asm_dir" >&2; return 1; }
   fi
 }
 
