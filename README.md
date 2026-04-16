@@ -1,8 +1,26 @@
 # ONTeater
 
+## <a name="quickstart"></a> Quickstart
+
+A minimal example to assembly a human genome from ONT data can be run with the following command:
+
+```sh
+HUMAN_GENOME_SIZE=3.2g # also accepts g,m,k suffixes
+BUSCO_LIN=primates
+OUT_PREFIX=example_output
+ONTeater --ONT_rds <input.fq.gz> --genome_size "$HUMAN_GENOME_SIZE" --BUSCO_lineage "$BUSCO_LIN" --out "$OUT_PREFIX"
+```
+
+Note that the user should supply a rough estimate of genome size and a valid [`BUSCO`](https://busco.ezlab.org) lineage.
+If genome size is not roughly known, we recommend using the [GoaT](https://goat.genomehubs.org) database to estimate from a related species.
+[`NextFlow`](https://www.nextflow.io) and either [`conda`](https://anaconda.org/anaconda/conda) or [Docker](https://www.docker.com) are dependencies and assumed to be accessible inside your system.
+
 ## Table of Contents
 
+- [Quickstart](#quickstart)
+- [Introduction](#intro)
 
+## <a name="intro"></a>Introduction
 
 ## Introduction
 
@@ -10,19 +28,6 @@ ONTeater is a [NextFlow](https://www.nextflow.io/docs/latest/index.html)-enabled
 Illumina shortreads and PacBio longreads are not currently supported, but may be in the future.
 
 With the release of [Hifiasm](https://github.com/chhylp123/hifiasm?tab=readme-ov-file#ontonly)'s ONT-only assembly mode, we recommend using 
-
-## Quickstart
-
-A genome assembly from ONT data can be run with the following command.
-Note that the user should supply a rough estimate of genome size and a valid [`BUSCO`](https://busco.ezlab.org) lineage.
-If genome size is not roughly known, we recommend using the [GoaT](https://goat.genomehubs.org) database to estimate from a related species.
-[`NextFlow`](https://www.nextflow.io) and [`conda`](https://anaconda.org/anaconda/conda) are dependencies and assumed to be accessible inside your system.
-
-```bash
-nextflow run main.nf --ONT_rds <input.fq.gz> --genome_size 1.1 --BUSCO_lineage <valid_BUSCO_lin> --prefix <output_prefix>
-```
-
-`--workflow run` is the default and currently executes preprocessing plus primary assembly.
 
 ## Execution profiles
 

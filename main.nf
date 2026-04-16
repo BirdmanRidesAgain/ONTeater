@@ -36,11 +36,20 @@ workflow {
     if (['run', 'trim', 'assemble'].contains(workflow_mode) && !ont_reads) {
         error "No ONT reads provided. Use --ONT_rds."
     }
+    if (['run', 'trim', 'assemble'].contains(workflow_mode) && !params.genome_size) {
+        error "--genome_size is required for workflow '${workflow_mode}'."
+    }
+    if (['run', 'trim', 'assemble'].contains(workflow_mode) && !params.BUSCO_lineage) {
+        error "--BUSCO_lineage is required for workflow '${workflow_mode}'."
+    }
     if (workflow_mode == 'postprocess' && (!params.flye_asm || !params.nd_asm)) {
         error "Workflow mode 'postprocess' requires --flye_asm and --nd_asm."
     }
     if (workflow_mode == 'qc' && !params.final_asm) {
         error "Workflow mode 'qc' requires --final_asm."
+    }
+    if (workflow_mode == 'qc' && !params.BUSCO_lineage) {
+        error "--BUSCO_lineage is required for workflow '${workflow_mode}'."
     }
 
     log.info """\

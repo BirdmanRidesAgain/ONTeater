@@ -11,17 +11,17 @@ DEFAULT_CONTAINER_IMAGE = "oneteater:1.0.0-amd64"
 def main():
     parser = ArgumentParser(description="Run the ONTeater Nextflow pipeline.")
     parser.add_argument("-o", "--ONT_rds", type=str, help="Path to ONT reads.")
-    parser.add_argument("-gs", "--genome_size", type=str)
-    parser.add_argument("-b", "--BUSCO_lineage", type=str)
-    parser.add_argument("-t", "--threads", type=int)
-    parser.add_argument("-w", "--workflow", type=str, default="run")
-    parser.add_argument("--flye_asm", type=str)
-    parser.add_argument("--nd_asm", type=str)
-    parser.add_argument("--final_asm", type=str)
-    parser.add_argument("-pro", "--profile", type=str)
-    parser.add_argument("--trace", type=str)
-    parser.add_argument("--report", type=str)
-    parser.add_argument("-pre", "--prefix", type=str, default="out")
+    parser.add_argument("-gs", "--genome_size", type=str, help="Genome size, with bare numbers interpreted as Gb. To explicitly require Gb, Mb or Kb, add g, m, or k suffix: eg, 250m")
+    parser.add_argument("-b", "--BUSCO_lineage", type=str, help="Valid BUSCO lineage. Select from: https://busco.ezlab.org/list_of_lineages.html")
+    parser.add_argument("-t", "--threads", type=int, help="Num threads. Defaults to 1/2 cores on machine.")
+    parser.add_argument("-w", "--workflow", type=str, default="run", help="Selected workflow. Valid options are 'run', 'trim', 'assemble', 'postprocess', 'qc'")
+    parser.add_argument("--flye_asm", type=str, help="Input Flye assembly. Option only used for 'postprocess' workflow.")
+    parser.add_argument("--nd_asm", type=str, help="Input NextDenovo assembly. Option only used for 'postprocess' workflow.")
+    parser.add_argument("--final_asm", type=str, help="Any input assembly. Option only used for 'qc' workflow.")
+    parser.add_argument("-pro", "--profile", type=str, help="NextFlow profile to use. Supported options are 'standard', 'conda', 'docker'")
+    parser.add_argument("--trace", type=str, help="Enables NextFlow trace output.")
+    parser.add_argument("--report", type=str, help="Enables NextFlow report output.")
+    parser.add_argument("-pre", "--prefix", type=str, default="out", help="Output prefix.")
     parser.add_argument(
         "--container_image",
         type=str,
@@ -31,7 +31,13 @@ def main():
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
+    # Enforce valid workflow
     workflow_mode = str(args.workflow)
+    valid_modes = ['run', 'trim', 'assemble', 'postprocess', 'qc']
+    if workflow_mode not in valid_modes:
+        parser.error(
+            f"Unsupported --workflow '{workflow_mode}'. Valid options: {', '.join(valid_modes)}"
+        )
     ont_reads = args.ONT_rds
 
     if workflow_mode in {"run", "trim", "assemble"} and not ont_reads:
@@ -44,7 +50,10 @@ def main():
     if workflow_mode == "postprocess" and (args.flye_asm is None or args.nd_asm is None):
         parser.error("--flye_asm and --nd_asm are required for workflow 'postprocess'.")
     if workflow_mode == "qc" and args.final_asm is None:
-        parser.error("--final_asm is required for workflow 'qc'.")
+        parser.error(f"--final_asm is required for workflow '{workflow_mode}'.")
+        if args.BUSCO_lineage is None:
+            parser.error(f"--BUSCO_lineage is required for workflow '{workflow_mode}'.")
+
 
     cmd = [
         "nextflow",
