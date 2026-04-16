@@ -3,7 +3,7 @@
 #   docker build -t oneteater:1.0.0 -f docker/Dockerfile .
 #
 # Apple Silicon → x86 cluster compatibility (optional):
-#   docker buildx build --platform linux/amd64 -t oneteater:1.0.0-amd64 -f docker/Dockerfile .
+#   docker buildx build --platform linux/amd64 -t ghcr.io/birdmanridesagain/onteater:1.0.0-amd64 -f docker/Dockerfile .
 
 FROM mambaorg/micromamba:2.0.2
 
