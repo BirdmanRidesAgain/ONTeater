@@ -27,6 +27,9 @@ docker pull ghcr.io/birdmanridesagain/onteater:1.0.0-amd64
 - [Introduction](#introduction)
 - [High-level Description](#high-level-description)
 - [Options](#options)
+- [Execution profiles](#execution-profiles)
+- [Setup testing](#setup-testing)
+- [Runtime](#runtime)
 
 ## Introduction
 
@@ -131,38 +134,27 @@ Equivalent native Nextflow call:
 nextflow run main.nf --workflow run --ONT_rds <reads.fq.gz> --genome_size 5m --BUSCO_lineage enterobacterales -stub-run
 ```
 
-## Smoke test
+## Setup testing
 
-### Conda (default profile)
+### Conda vs Docker?
 
-```bash
-./scripts/smoke_test.sh
-```
+NextFlow offers easy conda integration; this is known to work well on Linux systems, and is set as ONTeater's default option, as the `--profile standard` option.
+(It can also be enabled as `--profile conda`).
 
-By default this uses **conda** (`standard` profile) and `--workflow run`, then validates outputs under `results/smoke_direct/` and `results/smoke_wrapper/` (including `reads/`, merged assemblies, and QC paths when applicable).
+If this fails, we also provide a docker container (`--profile docker`).
+Conda mode has a known failure point on OSX systems, so we recommend just going directly to Docker if you're working on that architecture.
 
-Useful overrides:
+If you are running Docker, you have the option of changing the container image with the `--container_image` option.
+If you do this, the image will need to be locally accessible - I do not recommend doing this unless you know what you're doing, and generally encourage individuals to report problems to GitHub.
 
-- `WORKFLOW_MODE=trim ./scripts/smoke_test.sh` for preprocess-only.
-- `RUN_FULL=1 ./scripts/smoke_test.sh` to additionally launch a second full `workflow run` with prefix `smoke_full`.
-- `WORKFLOW_MODE=postprocess FLYE_ASM=<flye.fa> ND_ASM=<nd.fa> ./scripts/smoke_test.sh`
-- `WORKFLOW_MODE=qc FINAL_ASM=<final.fa> ./scripts/smoke_test.sh`
+### Stub testing
 
-### Docker (`docker` profile)
+The nature of genome assembly requires fairly large files to function - there's only so small you can go with 'toy' datasets.
 
-Separate script so Docker and conda smoke paths do not interfere:
+End-to-end testing is included in the `scripts/smoke_test*` series of files, but these scripts assume the presence of a 386Mb *Salmonella* data file.
+These files are available on request, but we instead recommend using the `--stub` option, which does a dry run of ONTeater's dependencies and workflow.
 
-```bash
-./scripts/smoke_test_docker.sh
-```
-
-This pulls/uses `ghcr.io/birdmanridesagain/onteater:1.0.0-amd64` by default, and builds from `docker/Dockerfile` only if the image is missing locally, then runs the same checks with `-profile docker` and distinct prefixes (`smoke_direct_docker`, `smoke_wrapper_docker`).
-
-Optional:
-
-- `CONTAINER_IMAGE=ghcr.io/birdmanridesagain/onteater:dev ./scripts/smoke_test_docker.sh`
-- `SKIP_IMAGE_BUILD=1 ./scripts/smoke_test_docker.sh` if the image is already loaded locally.
-- `STUB_RUN=1 ./scripts/smoke_test_docker.sh` to execute smoke with Nextflow native stubs.
+This can be combined with either (or any arbitrary added) `--profile` values.
 
 ### Requirements
 
